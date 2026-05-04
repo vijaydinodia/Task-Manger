@@ -1,0 +1,555 @@
+const User = require("../model/userModel");
+const Task = require("../model/taskModel");
+const transporter = require("../transporter");
+const XLSX = require("xlsx");
+
+//add task
+exports.addTask = async (req, res) => {
+  try {
+    const { taskName, deadline, note, assignedTo } = req.body;
+    // console.log(">>>>>>>req.body>>>>>>>>>", req.body);
+
+    if (!taskName || !deadline || !note || !assignedTo) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const assignedUser = await User.findById(assignedTo).select("name email");
+
+    if (!assignedUser) {
+      return res.status(404).json({ message: "Assigned user not found" });
+    }
+
+    const task = await Task.create({
+      taskName: taskName.trim(),
+      deadline,
+      note: note.trim(),
+      assignedTo,
+      createdBy: req.user._id,
+    });
+
+    // send email safely
+    try {
+      await transporter.sendMail({
+        from: `"${req.user?.name || "Admin"}" <${process.env.EMAIL_USER}>`,
+        to: assignedUser.email,
+        subject: "📌 New Task Assigned",
+        html: `
+          <h3>Hello ${assignedUser.name}</h3>
+          <p>You have a new task</p>
+          <p><b>${task.taskName}</b></p>
+          <p>Deadline: ${new Date(task.deadline).toDateString()}</p>
+        `,
+      });
+    } catch (err) {
+      console.log("Email error:", err.message);
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Task created",
+      data: task,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//bulk add tasks from xlsx
+exports.bulkAddTasks = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "XLSX file is required" });
+    }
+
+    const workbook = XLSX.read(req.file.buffer, {
+      type: "buffer",
+      cellDates: true,
+    });
+    const sheetName = workbook.SheetNames[0];
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+      defval: "",
+      raw: false,
+    });
+
+    if (rows.length === 0) {
+      return res.status(400).json({ message: "XLSX file has no rows" });
+    }
+
+    const createdTasks = [];
+    const failedRows = [];
+
+    for (const [index, row] of rows.entries()) {
+      const taskName = row.taskName || row["Task Name"] || row.title || row.Title;
+      const deadline = row.deadline || row.Deadline || row.date || row.Date;
+      const note = row.note || row.Note || row.description || row.Description;
+      const assignedEmail =
+        row.assignedEmail ||
+        row["Assigned Email"] ||
+        row.assignedTo ||
+        row["Assigned To"];
+
+      if (!taskName || !deadline || !note || !assignedEmail) {
+        failedRows.push({
+          row: index + 2,
+          message: "taskName, deadline, note, and assignedEmail are required",
+        });
+        continue;
+      }
+
+      const assignedUser = await User.findOne({
+        email: assignedEmail.toString().trim().toLowerCase(),
+        status: "active",
+      }).select("_id email");
+
+      if (!assignedUser) {
+        failedRows.push({
+          row: index + 2,
+          message: `Active user not found for ${assignedEmail}`,
+        });
+        continue;
+      }
+
+      const parsedDeadline = new Date(deadline);
+
+      if (Number.isNaN(parsedDeadline.getTime())) {
+        failedRows.push({
+          row: index + 2,
+          message: "Invalid deadline",
+        });
+        continue;
+      }
+
+      const task = await Task.create({
+        taskName: taskName.toString().trim(),
+        deadline: parsedDeadline,
+        note: note.toString().trim(),
+        assignedTo: assignedUser._id,
+        createdBy: req.user._id,
+      });
+
+      createdTasks.push(task);
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: `${createdTasks.length} tasks imported`,
+      createdCount: createdTasks.length,
+      failedCount: failedRows.length,
+      failedRows,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//get my tasks
+exports.getTaskByUser = async (req, res) => {
+  try {
+    const tasks = await Task.find({
+      $or: [{ assignedTo: req.user._id }, { createdBy: req.user._id }],
+    })
+      .populate("assignedTo", "name email")
+      .populate("createdBy", "name email");
+
+    return res.status(200).json({
+      success: true,
+      data: tasks,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//get all tasks
+exports.getAllTasks = async (req, res) => {
+  try {
+    const { sortBy = "newest", search = "" } = req.query;
+    const sortKeys = sortBy.split(",").filter(Boolean);
+    const searchText = search.trim();
+
+    const sortOptions = {
+      newest: { createdAt: -1 },
+      deadline: { deadline: 1 },
+    };
+
+    const taskQuery = {};
+
+    if (searchText) {
+      const searchRegex = new RegExp(searchText, "i");
+      const matchingUsers = await User.find({
+        $or: [{ name: searchRegex }, { email: searchRegex }],
+      }).select("_id");
+      const matchingUserIds = matchingUsers.map((user) => user._id);
+
+      taskQuery.$or = [
+        { taskName: searchRegex },
+        { note: searchRegex },
+        { status: searchRegex },
+        { assignedTo: { $in: matchingUserIds } },
+        { createdBy: { $in: matchingUserIds } },
+      ];
+    }
+
+    let tasks = await Task.find(taskQuery)
+      .sort(
+        sortKeys.includes("deadline")
+          ? sortOptions.deadline
+          : sortOptions.newest,
+      )
+      .populate("assignedTo", "name email")
+      .populate("createdBy", "name email");
+
+    const statusOrder = {
+      pending: 1,
+      progress: 2,
+      completed: 3,
+      inactive: 4,
+    };
+
+    const sortByStatus = (a, b) =>
+      (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
+
+    const sortByAssignedTo = (a, b) =>
+      (a.assignedTo?.name || "").localeCompare(b.assignedTo?.name || "");
+
+    const sortByCreatedBy = (a, b) =>
+      (a.createdBy?.name || "").localeCompare(b.createdBy?.name || "");
+
+    const sortFns = [];
+
+    if (sortKeys.includes("status")) {
+      sortFns.push(sortByStatus);
+    }
+
+    if (sortKeys.includes("assignedTo")) {
+      sortFns.push(sortByAssignedTo);
+    }
+
+    if (sortKeys.includes("createdBy")) {
+      sortFns.push(sortByCreatedBy);
+    }
+
+    if (sortFns.length > 0) {
+      tasks = tasks.sort((a, b) => {
+        for (const sortFn of sortFns) {
+          const result = sortFn(a, b);
+          if (result !== 0) return result;
+        }
+
+        if (sortKeys.includes("deadline")) {
+          return new Date(a.deadline || 0) - new Date(b.deadline || 0);
+        }
+
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: tasks,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//update task
+exports.updateTask = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { taskName, deadline, note, assignedTo, status } = req.body;
+
+    const task = await Task.findById(id);
+
+    // ✅ check task exists
+    if (!task) {
+      return res.status(404).json({
+        message: "Task not found",
+      });
+    }
+
+    const isAdmin = req.user.role === "admin";
+    const isTaskUser =
+      task.createdBy?.toString() === req.user._id ||
+      task.assignedTo?.toString() === req.user._id;
+
+    if (!isAdmin && !isTaskUser) {
+      return res.status(403).json({
+        message: "Unauthorized",
+      });
+    }
+
+    if (assignedTo) {
+      const assignedUser = await User.findOne({
+        _id: assignedTo,
+        status: "active",
+      });
+
+      if (!assignedUser) {
+        return res.status(404).json({ message: "Assigned active user not found" });
+      }
+    }
+
+    if (taskName !== undefined) task.taskName = taskName.trim();
+    if (deadline !== undefined) task.deadline = deadline;
+    if (note !== undefined) task.note = note.trim();
+    if (assignedTo !== undefined) task.assignedTo = assignedTo;
+    if (status !== undefined) task.status = status;
+
+    const updatedTask = await task.save();
+    await updatedTask.populate("assignedTo", "name email");
+    await updatedTask.populate("createdBy", "name email");
+
+    return res.status(200).json({
+      success: true,
+      message: "Task updated",
+      data: updatedTask,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+//start task
+exports.startTask = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const task = await Task.findById(id);
+
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    const isAdmin = req.user.role === "admin";
+    const isTaskUser =
+      task.createdBy?.toString() === req.user._id ||
+      task.assignedTo?.toString() === req.user._id;
+
+    if (!isAdmin && !isTaskUser) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    if (task.status !== "pending") {
+      return res.status(400).json({
+        message: "Only pending task can be started",
+      });
+    }
+
+    task.status = "progress";
+    await task.save();
+    await task.populate("assignedTo", "name email");
+    await task.populate("createdBy", "name email");
+
+    return res.status(200).json({
+      success: true,
+      message: "Task started",
+      data: task,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//complete task
+exports.completeTask = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const task = await Task.findById(id);
+
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    const isAdmin = req.user.role === "admin";
+    const isTaskUser =
+      task.createdBy?.toString() === req.user._id ||
+      task.assignedTo?.toString() === req.user._id;
+
+    if (!isAdmin && !isTaskUser) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    if (task.status !== "progress") {
+      return res.status(400).json({
+        message: "Task must be in progress to complete",
+      });
+    }
+
+    task.status = "completed";
+    await task.save();
+    await task.populate("assignedTo", "name email");
+    await task.populate("createdBy", "name email");
+
+    return res.status(200).json({
+      success: true,
+      message: "Task completed",
+      data: task,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//delete task
+exports.deleteTask = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const task = await Task.findById(id);
+
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    if (
+      req.user.role !== "admin" &&
+      task.createdBy.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        message: "Only creator can delete task",
+      });
+    }
+
+    await Task.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Task deleted",
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//soft delete task
+exports.softDeleteTask = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const task = await Task.findById(id);
+
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    if (
+      req.user.role !== "admin" &&
+      task.createdBy.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        message: "Only creator or admin can soft delete task",
+      });
+    }
+
+    if (task.status === "completed") {
+      return res.status(400).json({
+        message: "Completed task cannot be deleted",
+      });
+    }
+
+    task.status = "inactive"; // ⚠️ only if your schema allows it
+    await task.save();
+    await task.populate("assignedTo", "name email");
+    await task.populate("createdBy", "name email");
+
+    return res.status(200).json({
+      success: true,
+      message: "Task soft deleted",
+      data: task,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//restore task
+exports.restoreTask = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const task = await Task.findById(id);
+
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    if (
+      req.user.role !== "admin" &&
+      task.createdBy.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        message: "Only creator or admin can restore task",
+      });
+    }
+
+    if (task.status !== "inactive") {
+      return res.status(400).json({
+        message: "Only inactive task can be restored",
+      });
+    }
+
+    task.status = "pending";
+    await task.save();
+    await task.populate("assignedTo", "name email");
+    await task.populate("createdBy", "name email");
+
+    return res.status(200).json({
+      success: true,
+      message: "Task restored",
+      data: task,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//admin route 
+exports.adminDashboard = async (req, res) => {
+  try {
+    // only admin
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const totalUsers = await User.countDocuments();
+    const totalTasks = await Task.countDocuments();
+
+    const pendingTasks = await Task.countDocuments({ status: "pending" });
+    const progressTasks = await Task.countDocuments({ status: "progress" });
+    const completedTasks = await Task.countDocuments({ status: "completed" });
+
+    const overdueTasks = await Task.countDocuments({
+      deadline: { $lt: new Date() },
+      status: { $ne: "completed" },
+    });
+
+    const recentUsers = await User.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select("name email createdAt");
+
+    const recentTasks = await Task.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate("assignedTo", "name")
+      .populate("createdBy", "name");
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalUsers,
+        totalTasks,
+        pendingTasks,
+        progressTasks,
+        completedTasks,
+        overdueTasks,
+        recentUsers,
+        recentTasks,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
