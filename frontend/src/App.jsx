@@ -5,7 +5,6 @@ import Header from "./components/Header";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // Auth Pages
-import Signup from "./components/SignUp";
 import Login from "./components/Login";
 import ResetPassword from "./components/ResetPassword";
 import AddTask from "./components/AddTask";
@@ -45,10 +44,11 @@ const App = () => {
           path="/"
           element={
             <PublicRoute>
-              <Signup />
+              <Login />
             </PublicRoute>
           }
         />
+        <Route path="/signup" element={<Navigate to="/login" replace />} />
         <Route
           path="/login"
           element={
@@ -122,6 +122,7 @@ const App = () => {
             <h1 className="text-center mt-10 text-xl font-bold">
               404 - Page Not Found ❌
             </h1>
+          
           }
         />
       </Routes>

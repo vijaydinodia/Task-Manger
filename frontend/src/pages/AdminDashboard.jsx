@@ -10,6 +10,7 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingTasks, setLoadingTasks] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
   const [taskSearch, setTaskSearch] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [actionUserId, setActionUserId] = useState("");
@@ -37,6 +38,11 @@ const AdminDashboard = () => {
     note: "",
     assignedTo: "",
     status: "pending",
+  });
+  const [userForm, setUserForm] = useState({
+    name: "",
+    email: "",
+    password: "",
   });
 
   const token = localStorage.getItem("token");
@@ -121,6 +127,33 @@ const AdminDashboard = () => {
       alert(err.response?.data?.message || "Failed to delete user");
     } finally {
       setActionUserId("");
+    }
+  };
+
+  const setUserData = (e) => {
+    const { name, value } = e.target;
+    setUserForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const createUser = async (e) => {
+    e.preventDefault();
+
+    if (!userForm.name.trim() || !userForm.email.trim() || !userForm.password) {
+      return alert("Name, email, and password are required");
+    }
+
+    try {
+      setCreatingUser(true);
+      const res = await axios.post(`${API_URL}/user/admin-create`, userForm, {
+        headers,
+      });
+      setUsers((prev) => [res.data.user, ...prev]);
+      setUserForm({ name: "", email: "", password: "" });
+      alert(res.data.message || "User created and login details emailed");
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to create user");
+    } finally {
+      setCreatingUser(false);
     }
   };
 
@@ -1129,6 +1162,43 @@ const AdminDashboard = () => {
                 </button>
               </div>
             </div>
+
+            <form
+              onSubmit={createUser}
+              className="mb-5 grid gap-3 rounded-lg bg-white p-4 shadow dark:bg-gray-800 md:grid-cols-[1fr_1fr_1fr_auto]"
+            >
+              <input
+                type="text"
+                name="name"
+                value={userForm.name}
+                onChange={setUserData}
+                placeholder="User name"
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              />
+              <input
+                type="email"
+                name="email"
+                value={userForm.email}
+                onChange={setUserData}
+                placeholder="Email address"
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              />
+              <input
+                type="password"
+                name="password"
+                value={userForm.password}
+                onChange={setUserData}
+                placeholder="Password"
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              />
+              <button
+                type="submit"
+                disabled={creatingUser}
+                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {creatingUser ? "Creating..." : "Add User"}
+              </button>
+            </form>
 
             {loadingUsers ? (
               <p className="text-gray-600 dark:text-gray-300">Loading users...</p>

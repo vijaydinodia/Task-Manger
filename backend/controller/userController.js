@@ -9,11 +9,18 @@ const saltRounds = 10;
 
 //signUp
 exports.signUp = async (req, res) => {
+  return res.status(403).json({
+    message: "Direct signup is disabled. Please contact an admin.",
+  });
+};
+
+// admin create user
+exports.createUserByAdmin = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ message: "All fields are required" });
+      return res.status(400).json({ message: "Name, email, and password are required" });
     }
 
     const existingUser = await User.findOne({ email });
@@ -24,17 +31,43 @@ exports.signUp = async (req, res) => {
     const hashPassword = await bcrypt.hash(password, saltRounds);
 
     const newUser = await User.create({
-      name,
-      email,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
       password: hashPassword,
+      role: "user",
+      status: "active",
     });
 
+    try {
+      await transporter.sendMail({
+        from: `"Task Manager" <${process.env.EMAIL_USER}>`,
+        to: newUser.email,
+        subject: "Task Manager account created",
+        html: `
+          <div style="font-family:Arial,sans-serif;line-height:1.5">
+            <h2>Welcome to Task Manager</h2>
+            <p>Your account has been created by an admin.</p>
+            <p><strong>Email:</strong> ${newUser.email}</p>
+            <p><strong>Password:</strong> ${password}</p>
+            <p>Please login and change your password from your profile.</p>
+          </div>
+        `,
+      });
+    } catch (mailError) {
+      await User.findByIdAndDelete(newUser._id);
+      return res.status(500).json({
+        message: "User was not created because the email could not be sent",
+      });
+    }
+
     return res.status(201).json({
-      message: "User registered successfully",
+      message: "User created and login details emailed",
       user: {
         _id: newUser._id,
         name: newUser.name,
         email: newUser.email,
+        role: newUser.role,
+        status: newUser.status,
       },
     });
   } catch (error) {

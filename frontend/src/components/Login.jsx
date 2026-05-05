@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const Login = () => {
@@ -25,10 +25,7 @@ const Login = () => {
 
       const res = await axios.post("http://localhost:5000/user/login", form);
 
-      // ✅ store token
       localStorage.setItem("token", res.data.token);
-
-      // ✅ store user info (IMPORTANT)
       localStorage.setItem(
         "user",
         JSON.stringify({
@@ -39,12 +36,10 @@ const Login = () => {
         }),
       );
 
-      // optional
       localStorage.setItem("currUsername", form.email.split("@")[0]);
 
-      alert(res.data.message || "Login successful 🎉");
+      alert(res.data.message || "Login successful");
 
-      // ✅ role-based redirect
       if ((res.data.user?.role || res.data.role) === "admin") {
         navigate("/admin");
       } else {
@@ -61,7 +56,7 @@ const Login = () => {
     <div className="theme-bg">
       <div className="theme-card w-full max-w-md">
         <h2 className="text-2xl font-bold text-center mb-2 text-gray-800 dark:text-white">
-          Welcome Back 👋
+          Welcome Back
         </h2>
 
         <p className="text-sm text-center mb-6 text-gray-500 dark:text-gray-300">
@@ -95,16 +90,6 @@ const Login = () => {
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
-
-        <p className="text-sm text-center mt-4 text-gray-600 dark:text-gray-300">
-          Don’t have an account?{" "}
-          <Link
-            to="/"
-            className="text-indigo-600 font-semibold hover:underline"
-          >
-            Signup
-          </Link>
-        </p>
       </div>
     </div>
   );

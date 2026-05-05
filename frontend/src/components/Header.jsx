@@ -59,21 +59,12 @@ const Header = () => {
 
         <div className="flex items-center gap-4">
           {!isLoggedIn ? (
-            <>
-              <Link
-                to="/"
-                className="text-gray-700 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-300"
-              >
-                Signup
-              </Link>
-
-              <Link
-                to="/login"
-                className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white shadow hover:bg-indigo-700 transition"
-              >
-                Login
-              </Link>
-            </>
+            <Link
+              to="/login"
+              className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white shadow hover:bg-indigo-700 transition"
+            >
+              Login
+            </Link>
           ) : (
             <>
               <Link
