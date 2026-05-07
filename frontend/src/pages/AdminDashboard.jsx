@@ -19,6 +19,7 @@ const AdminDashboard = () => {
   const [taskSorts, setTaskSorts] = useState(["newest"]);
   const [bulkFile, setBulkFile] = useState(null);
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [templateLoading, setTemplateLoading] = useState(false);
   const [bulkResult, setBulkResult] = useState(null);
   const {
     isTableView: isTaskTableView,
@@ -162,6 +163,11 @@ const AdminDashboard = () => {
     return new Date(date).toISOString().split("T")[0];
   };
 
+  const getTaskImageUrl = (task) => task.image?.downloadUrl || task.image?.url || "";
+
+  const getTaskImageName = (task) =>
+    task.image?.originalName || `${task.taskName || "task"}-image`;
+
   const startEditTask = (task) => {
     setEditingTaskId(task._id);
     setTaskForm({
@@ -246,7 +252,7 @@ const AdminDashboard = () => {
     e.preventDefault();
 
     if (!bulkFile) {
-      return alert("Please select an XLSX file");
+      return alert("Please select a bulk upload file");
     }
 
     const formData = new FormData();
@@ -267,6 +273,72 @@ const AdminDashboard = () => {
       alert(err.response?.data?.message || "Failed to upload bulk tasks");
     } finally {
       setBulkLoading(false);
+    }
+  };
+
+  const downloadBulkTemplate = async () => {
+    try {
+      setTemplateLoading(true);
+      const sourceUsers =
+        users.length > 0
+          ? users
+          : (
+              await axios.get(`${API_URL}/user/all`, {
+                headers,
+              })
+            ).data.users || [];
+
+      if (sourceUsers.length === 0) {
+        alert("No users found for the sample file");
+        return;
+      }
+
+      const escapeCsvCell = (value = "") => {
+        const text = String(value).replace(/"/g, '""');
+        return `"${text}"`;
+      };
+
+      const activeUsers = sourceUsers.filter((user) => user.status === "active");
+      const headers = [
+        "taskName",
+        "deadline",
+        "note",
+        "assignedEmail",
+        "assignedName",
+        "role",
+      ];
+      const rows = activeUsers.map((user) =>
+        [
+          "",
+          "",
+          "",
+          user.email,
+          user.name,
+          user.role,
+        ]
+          .map(escapeCsvCell)
+          .join(","),
+      );
+      const csv = [
+        headers.join(","),
+        ...rows,
+      ].join("\r\n");
+
+      const blob = new Blob([csv], {
+        type: "text/csv;charset=utf-8",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "bulk-task-template.csv");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to download sample file");
+    } finally {
+      setTemplateLoading(false);
     }
   };
 
@@ -826,29 +898,39 @@ const AdminDashboard = () => {
                     Bulk Upload Tasks
                   </h3>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Upload an .xlsx file with columns: taskName, deadline, note,
-                    assignedEmail
+                    Download the sample file, open it in Excel, fill taskName,
+                    deadline, and note for the listed users, then upload it.
                   </p>
                 </div>
 
-                <form onSubmit={uploadBulkTasks} className="flex flex-col gap-3 sm:flex-row">
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={(e) => {
-                      setBulkFile(e.target.files?.[0] || null);
-                      setBulkResult(null);
-                    }}
-                    className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  />
+                <div className="flex flex-col gap-3 lg:items-end">
                   <button
-                    type="submit"
-                    disabled={bulkLoading}
-                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    type="button"
+                    onClick={downloadBulkTemplate}
+                    disabled={templateLoading}
+                    className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-indigo-400/40 dark:bg-indigo-950/60 dark:text-indigo-200 dark:hover:bg-indigo-900/70"
                   >
-                    {bulkLoading ? "Uploading..." : "Upload XLSX"}
+                    {templateLoading ? "Preparing..." : "Download Sample File"}
                   </button>
-                </form>
+                  <form onSubmit={uploadBulkTasks} className="flex flex-col gap-3 sm:flex-row">
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      onChange={(e) => {
+                        setBulkFile(e.target.files?.[0] || null);
+                        setBulkResult(null);
+                      }}
+                      className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    />
+                    <button
+                      type="submit"
+                      disabled={bulkLoading}
+                      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {bulkLoading ? "Uploading..." : "Upload XLSX"}
+                    </button>
+                  </form>
+                </div>
               </div>
 
               {bulkResult && (
@@ -919,6 +1001,17 @@ const AdminDashboard = () => {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex min-w-56 flex-wrap gap-2">
+                              {getTaskImageUrl(task) && (
+                                <a
+                                  href={getTaskImageUrl(task)}
+                                  download={getTaskImageName(task)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500"
+                                >
+                                  Download Image
+                                </a>
+                              )}
                               <button
                                 type="button"
                                 disabled={isBusy}
@@ -1079,6 +1172,18 @@ const AdminDashboard = () => {
                           </div>
 
                           <div className="mt-5 grid grid-cols-2 gap-3">
+                            {getTaskImageUrl(task) && (
+                              <a
+                                href={getTaskImageUrl(task)}
+                                download={getTaskImageName(task)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="col-span-2 rounded-lg bg-slate-700 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500"
+                              >
+                                Download Image
+                              </a>
+                            )}
+
                             <button
                               type="button"
                               disabled={isBusy}

@@ -8,10 +8,17 @@ const Header = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   const { theme, toggleTheme } = useTheme();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [, refreshProfilePhoto] = useState(0);
   const profileRef = useRef(null);
+  const backgroundInputRef = useRef(null);
+  const profilePhotoInputRef = useRef(null);
   const isLoggedIn = Boolean(token);
   const isAdmin = user?.role === "admin";
   const dashboardPath = isAdmin ? "/admin" : "/userDashborad";
+  const userStorageKey = user?._id || user?.email || "guest";
+  const profilePhoto = isLoggedIn
+    ? localStorage.getItem(`profilePhoto:${userStorageKey}`) || ""
+    : "";
 
   const initials = (user?.name || user?.email || "U")
     .trim()
@@ -29,6 +36,29 @@ const Header = () => {
     return () => document.removeEventListener("mousedown", closeProfileMenu);
   }, []);
 
+  useEffect(() => {
+    if (!isLoggedIn) {
+      document.body.classList.remove("has-dashboard-background");
+      document.body.style.removeProperty("--dashboard-background-image");
+      return;
+    }
+
+    const savedBackground = localStorage.getItem(
+      `dashboardBackground:${userStorageKey}`,
+    );
+
+    if (savedBackground) {
+      document.body.style.setProperty(
+        "--dashboard-background-image",
+        `url(${JSON.stringify(savedBackground)})`,
+      );
+      document.body.classList.add("has-dashboard-background");
+    } else {
+      document.body.classList.remove("has-dashboard-background");
+      document.body.style.removeProperty("--dashboard-background-image");
+    }
+  }, [isLoggedIn, userStorageKey]);
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -45,6 +75,65 @@ const Header = () => {
   const goToResetPassword = () => {
     setProfileOpen(false);
     navigate("/resetPassword");
+  };
+
+  const openBackgroundPicker = () => {
+    setProfileOpen(false);
+    backgroundInputRef.current?.click();
+  };
+
+  const openProfilePhotoPicker = () => {
+    setProfileOpen(false);
+    profilePhotoInputRef.current?.click();
+  };
+
+  const readImageFile = (file, onLoad, sizeErrorMessage) => {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file.");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      try {
+        onLoad(reader.result);
+      } catch {
+        alert(sizeErrorMessage);
+      }
+    };
+
+    reader.onerror = () => {
+      alert("Failed to load image.");
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  const handleBackgroundUpload = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    readImageFile(file, (imageData) => {
+      localStorage.setItem(`dashboardBackground:${userStorageKey}`, imageData);
+      document.body.style.setProperty(
+        "--dashboard-background-image",
+        `url(${JSON.stringify(imageData)})`,
+      );
+      document.body.classList.add("has-dashboard-background");
+    }, "Image is too large. Please choose a smaller background image.");
+  };
+
+  const handleProfilePhotoUpload = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    readImageFile(file, (imageData) => {
+      localStorage.setItem(`profilePhoto:${userStorageKey}`, imageData);
+      refreshProfilePhoto((version) => version + 1);
+    }, "Profile photo is too large. Please choose a smaller image.");
   };
 
   return (
@@ -87,25 +176,48 @@ const Header = () => {
                   onClick={() => setProfileOpen((prev) => !prev)}
                   aria-label="Open profile menu"
                   aria-expanded={profileOpen}
-                  className="grid h-11 w-11 place-items-center rounded-full border border-indigo-200 bg-indigo-600 text-sm font-bold text-white shadow-sm shadow-indigo-600/20 hover:bg-indigo-700 dark:border-indigo-400/40 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+                  className="grid h-11 w-11 overflow-hidden rounded-full border border-indigo-200 bg-indigo-600 text-sm font-bold text-white shadow-sm shadow-indigo-600/20 hover:bg-indigo-700 dark:border-indigo-400/40 dark:bg-indigo-500 dark:hover:bg-indigo-400"
                 >
-                  {initials}
+                  {profilePhoto ? (
+                    <img
+                      src={profilePhoto}
+                      alt="Profile"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    initials
+                  )}
                 </button>
 
                 {profileOpen && (
                   <div className="absolute right-0 top-14 z-30 w-64 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-slate-900">
                     <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800">
-                      <p className="truncate font-semibold text-gray-900 dark:text-white">
-                        {user?.name || "User"}
-                      </p>
-                      <p className="truncate text-sm text-gray-500 dark:text-gray-400">
-                        {user?.email}
-                      </p>
-                      {user?.role && (
-                        <p className="mt-2 inline-flex rounded-full bg-indigo-50 px-2 py-1 text-xs font-semibold capitalize text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-200">
-                          {user.role}
-                        </p>
-                      )}
+                      <div className="flex items-center gap-3">
+                        <div className="grid h-12 w-12 shrink-0 overflow-hidden rounded-full bg-indigo-600 text-sm font-bold text-white">
+                          {profilePhoto ? (
+                            <img
+                              src={profilePhoto}
+                              alt="Profile"
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <span className="m-auto">{initials}</span>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-gray-900 dark:text-white">
+                            {user?.name || "User"}
+                          </p>
+                          <p className="truncate text-sm text-gray-500 dark:text-gray-400">
+                            {user?.email}
+                          </p>
+                          {user?.role && (
+                            <p className="mt-2 inline-flex rounded-full bg-indigo-50 px-2 py-1 text-xs font-semibold capitalize text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-200">
+                              {user.role}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     <div className="p-2">
@@ -130,10 +242,24 @@ const Header = () => {
                       </button>
                       <button
                         type="button"
+                        onClick={openProfilePhotoPicker}
+                        className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 dark:text-gray-200 dark:hover:bg-slate-800 dark:hover:text-white"
+                      >
+                        Add Profile Photo
+                      </button>
+                      <button
+                        type="button"
                         onClick={goToResetPassword}
                         className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 dark:text-gray-200 dark:hover:bg-slate-800 dark:hover:text-white"
                       >
                         Reset Password
+                      </button>
+                      <button
+                        type="button"
+                        onClick={openBackgroundPicker}
+                        className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 dark:text-gray-200 dark:hover:bg-slate-800 dark:hover:text-white"
+                      >
+                        Add Background
                       </button>
                       <button
                         type="button"
@@ -147,6 +273,26 @@ const Header = () => {
                 )}
               </div>
             </>
+          )}
+
+          {isLoggedIn && (
+            <input
+              ref={backgroundInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleBackgroundUpload}
+              className="hidden"
+            />
+          )}
+
+          {isLoggedIn && (
+            <input
+              ref={profilePhotoInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleProfilePhotoUpload}
+              className="hidden"
+            />
           )}
 
           <button

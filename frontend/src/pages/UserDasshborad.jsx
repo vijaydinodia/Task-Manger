@@ -146,6 +146,11 @@ const UserDasshborad = () => {
   const isCreator = (task) =>
     task.createdBy?._id === user?._id || task.createdBy?.email === user?.email;
 
+  const getTaskImageUrl = (task) => task.image?.downloadUrl || task.image?.url || "";
+
+  const getTaskImageName = (task) =>
+    task.image?.originalName || `${task.taskName || "task"}-image`;
+
   const getTaskRelation = (task) => {
     const assignedToMe =
       task.assignedTo?._id === user?._id || task.assignedTo?.email === user?.email;
@@ -382,6 +387,17 @@ const UserDasshborad = () => {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex min-w-40 flex-wrap gap-2">
+                            {getTaskImageUrl(task) && (
+                              <a
+                                href={getTaskImageUrl(task)}
+                                download={getTaskImageName(task)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500"
+                              >
+                                Download Image
+                              </a>
+                            )}
                             {task.status === "pending" && (
                               <button
                                 type="button"
@@ -505,6 +521,18 @@ const UserDasshborad = () => {
                     </div>
 
                     <div className="mt-5 grid grid-cols-2 gap-3">
+                      {getTaskImageUrl(task) && (
+                        <a
+                          href={getTaskImageUrl(task)}
+                          download={getTaskImageName(task)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="col-span-2 rounded-lg bg-slate-700 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500"
+                        >
+                          Download Image
+                        </a>
+                      )}
+
                       {task.status === "pending" && (
                         <button
                           type="button"

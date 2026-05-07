@@ -2,6 +2,7 @@ const User = require("../model/userModel");
 const Task = require("../model/taskModel");
 const transporter = require("../transporter");
 const XLSX = require("xlsx");
+const { uploadImage } = require("../utility/cloudnairy");
 
 //add task
 exports.addTask = async (req, res) => {
@@ -19,12 +20,33 @@ exports.addTask = async (req, res) => {
       return res.status(404).json({ message: "Assigned user not found" });
     }
 
+    let image = {};
+
+    if (req.file) {
+      const [uploadedImage] = await uploadImage([req.file]);
+
+      if (!uploadedImage?.secure_url) {
+        return res.status(500).json({ message: "Failed to upload task image" });
+      }
+
+      image = {
+        url: uploadedImage.secure_url,
+        downloadUrl: uploadedImage.secure_url.replace(
+          "/upload/",
+          "/upload/fl_attachment/",
+        ),
+        publicId: uploadedImage.public_id,
+        originalName: req.file.originalname,
+      };
+    }
+
     const task = await Task.create({
       taskName: taskName.trim(),
       deadline,
       note: note.trim(),
       assignedTo,
       createdBy: req.user._id,
+      image,
     });
 
     // send email safely
@@ -91,6 +113,11 @@ exports.bulkAddTasks = async (req, res) => {
         row["Assigned Email"] ||
         row.assignedTo ||
         row["Assigned To"];
+      const hasTaskDetails = taskName || deadline || note;
+
+      if (!hasTaskDetails) {
+        continue;
+      }
 
       if (!taskName || !deadline || !note || !assignedEmail) {
         failedRows.push({
@@ -103,7 +130,7 @@ exports.bulkAddTasks = async (req, res) => {
       const assignedUser = await User.findOne({
         email: assignedEmail.toString().trim().toLowerCase(),
         status: "active",
-      }).select("_id email");
+      }).select("_id name email");
 
       if (!assignedUser) {
         failedRows.push({
@@ -131,6 +158,29 @@ exports.bulkAddTasks = async (req, res) => {
         createdBy: req.user._id,
       });
 
+      try {
+        await transporter.sendMail({
+          from: `"${req.user?.name || "Admin"}" <${process.env.EMAIL_USER}>`,
+          to: assignedUser.email,
+          subject: "New Task Assigned",
+          html: `
+            <div style="font-family:Arial,sans-serif;line-height:1.5;color:#0f172a">
+              <h2 style="margin:0 0 12px;color:#4f46e5">New Task Assigned</h2>
+              <p>Hello ${assignedUser.name || "there"},</p>
+              <p>You have been assigned a new task from bulk upload.</p>
+              <div style="margin:18px 0;padding:16px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc">
+                <p style="margin:0 0 8px"><strong>Task:</strong> ${task.taskName}</p>
+                <p style="margin:0 0 8px"><strong>Deadline:</strong> ${new Date(task.deadline).toDateString()}</p>
+                <p style="margin:0"><strong>Note:</strong> ${task.note}</p>
+              </div>
+              <p>Please login to Task Manager to view and update your task.</p>
+            </div>
+          `,
+        });
+      } catch (err) {
+        console.log("Bulk task email error:", err.message);
+      }
+
       createdTasks.push(task);
     }
 
@@ -141,6 +191,79 @@ exports.bulkAddTasks = async (req, res) => {
       failedCount: failedRows.length,
       failedRows,
     });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//download sample xlsx for bulk task upload
+exports.downloadBulkTaskTemplate = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const users = await User.find({ status: "active" })
+      .select("name email role")
+      .sort({ name: 1, email: 1 });
+
+    const templateRows = users.map((user) => ({
+      taskName: "",
+      deadline: "",
+      note: "",
+      assignedEmail: user.email,
+      assignedName: user.name,
+      role: user.role,
+    }));
+
+    const headers = [
+      "taskName",
+      "deadline",
+      "note",
+      "assignedEmail",
+      "assignedName",
+      "role",
+    ];
+    const worksheet = XLSX.utils.json_to_sheet(templateRows, {
+      header: headers,
+      skipHeader: false,
+    });
+
+    worksheet["!cols"] = [
+      { wch: 28 },
+      { wch: 14 },
+      { wch: 42 },
+      { wch: 32 },
+      { wch: 24 },
+      { wch: 12 },
+    ];
+
+    const instructions = XLSX.utils.aoa_to_sheet([
+      ["Bulk Upload Instructions"],
+      [""],
+      ["Fill taskName, deadline, and note for each user row you want to import."],
+      ["Keep assignedEmail unchanged so the task is assigned to the correct user."],
+      ["Use deadline format YYYY-MM-DD, for example 2026-06-30."],
+      ["Rows with no task details are skipped. Partially filled rows are reported after upload."],
+    ]);
+    instructions["!cols"] = [{ wch: 88 }];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Bulk Task Template");
+    XLSX.utils.book_append_sheet(workbook, instructions, "Instructions");
+
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=\"bulk-task-template.xlsx\"",
+    );
+
+    return res.status(200).send(buffer);
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }

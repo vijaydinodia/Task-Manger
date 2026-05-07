@@ -7,6 +7,86 @@ const moment = require("moment");
 
 const saltRounds = 10;
 
+const escapeHtml = (value = "") =>
+  String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+const createdAccountTemplate = ({ name, email, password }) => {
+  const safeName = escapeHtml(name || "there");
+  const safeEmail = escapeHtml(email);
+  const safePassword = escapeHtml(password);
+  const loginUrl = process.env.FRONTEND_URL || "http://localhost:5173/login";
+
+  return `
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Task Manager Account Created</title>
+      </head>
+      <body style="margin:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f5f9;padding:32px 16px;">
+          <tr>
+            <td align="center">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;overflow:hidden;border-radius:18px;background:#ffffff;box-shadow:0 18px 45px rgba(15,23,42,0.12);">
+                <tr>
+                  <td style="background:#4f46e5;padding:28px 32px;color:#ffffff;">
+                    <p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">Task Manager</p>
+                    <h1 style="margin:0;font-size:28px;line-height:1.25;">Your account is ready</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:32px;">
+                    <p style="margin:0 0 18px;font-size:16px;line-height:1.6;">Hi ${safeName},</p>
+                    <p style="margin:0 0 24px;font-size:16px;line-height:1.6;">
+                      An admin has created your Task Manager account. Use the credentials below to sign in and start managing your assigned tasks.
+                    </p>
+
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 26px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;">
+                      <tr>
+                        <td style="padding:18px 20px;border-bottom:1px solid #e2e8f0;">
+                          <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;">Email</p>
+                          <p style="margin:0;font-size:16px;font-weight:700;color:#0f172a;">${safeEmail}</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:18px 20px;">
+                          <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;">Temporary password</p>
+                          <p style="margin:0;font-size:16px;font-weight:700;color:#0f172a;">${safePassword}</p>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <a href="${escapeHtml(loginUrl)}" style="display:inline-block;border-radius:10px;background:#4f46e5;padding:13px 20px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;">
+                      Login to Task Manager
+                    </a>
+
+                    <p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:#475569;">
+                      For your security, please change this password from your profile after your first login.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="border-top:1px solid #e2e8f0;padding:18px 32px;background:#f8fafc;">
+                    <p style="margin:0;font-size:12px;line-height:1.5;color:#64748b;">
+                      If you were not expecting this account, please contact your Task Manager admin.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `;
+};
+
 //signUp
 exports.signUp = async (req, res) => {
   return res.status(403).json({
@@ -39,20 +119,70 @@ exports.createUserByAdmin = async (req, res) => {
     });
 
     try {
-      await transporter.sendMail({
-        from: `"Task Manager" <${process.env.EMAIL_USER}>`,
-        to: newUser.email,
-        subject: "Task Manager account created",
-        html: `
-          <div style="font-family:Arial,sans-serif;line-height:1.5">
-            <h2>Welcome to Task Manager</h2>
-            <p>Your account has been created by an admin.</p>
+     await transporter.sendMail({
+       from: `"Task Manager" <${process.env.EMAIL_USER}>`,
+       to: newUser.email,
+       subject: "🎉 Welcome to Task Manager - Account Created Successfully",
+       html: `
+    <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 30px;">
+      <div style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+        
+        <!-- Header -->
+        <div style="background: #4f46e5; padding: 20px; text-align: center; color: white;">
+          <h1 style="margin: 0;">Task Manager</h1>
+          <p style="margin-top: 5px;">Your Account Is Ready 🚀</p>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 30px; color: #333;">
+          <h2>Hello ${newUser.name}, 👋</h2>
+
+          <p>
+            Welcome to <strong>Task Manager</strong>! Your account has been created successfully.
+          </p>
+
+          <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #4f46e5;">Account Details</h3>
+
             <p><strong>Email:</strong> ${newUser.email}</p>
             <p><strong>Password:</strong> ${password}</p>
-            <p>Please login and change your password from your profile.</p>
           </div>
-        `,
-      });
+
+          <p>
+            You can now log in and start managing your daily tasks efficiently.
+          </p>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a 
+              href="http://localhost:5173/login"
+              style="
+                background: #4f46e5;
+                color: white;
+                padding: 12px 25px;
+                text-decoration: none;
+                border-radius: 6px;
+                font-weight: bold;
+                display: inline-block;
+              "
+            >
+              Login Now
+            </a>
+          </div>
+
+          <p style="font-size: 14px; color: #666;">
+            If you did not create this account, please ignore this email.
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #f3f4f6; padding: 15px; text-align: center; font-size: 13px; color: #777;">
+          © ${new Date().getFullYear()} Task Manager. All rights reserved.
+        </div>
+
+      </div>
+    </div>
+  `,
+     });
     } catch (mailError) {
       await User.findByIdAndDelete(newUser._id);
       return res.status(500).json({

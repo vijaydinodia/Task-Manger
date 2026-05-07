@@ -4,11 +4,23 @@ const multer = require("multer");
 
 const { auth } = require("../middleware/auth");
 const { isAdmin } = require("../middleware/admin");
-const upload = multer({ storage: multer.memoryStorage() });
+const storage = multer.memoryStorage();
+const fileUpload = multer({ storage });
+const imageUpload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith("image/")) {
+      return cb(new Error("Only image files are allowed"));
+    }
+
+    cb(null, true);
+  },
+});
 
 const {
   addTask,
   bulkAddTasks,
+  downloadBulkTaskTemplate,
   getTaskByUser,
   getAllTasks,
   updateTask,
@@ -24,10 +36,11 @@ router.use(auth);
 
 router.get("/all", isAdmin, getAllTasks);
 router.get("/admin/dashboard", isAdmin, adminDashboard);
+router.get("/bulk-template", isAdmin, downloadBulkTaskTemplate);
 
-router.post("/add", addTask);
+router.post("/add", imageUpload.single("image"), addTask);
 
-router.post("/bulk-upload", isAdmin, upload.single("file"), bulkAddTasks);
+router.post("/bulk-upload", isAdmin, fileUpload.single("file"), bulkAddTasks);
 
 router.get("/my-tasks", getTaskByUser);
 

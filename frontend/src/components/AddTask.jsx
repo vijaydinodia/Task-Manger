@@ -13,6 +13,7 @@ const AddTask = () => {
     note: "",
     assignedTo: "",
   });
+  const [image, setImage] = useState(null);
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -45,6 +46,10 @@ const AddTask = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const setImageData = (e) => {
+    setImage(e.target.files?.[0] || null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -58,7 +63,22 @@ const AddTask = () => {
 
     try {
       setLoading(true);
-      await axios.post(`${API_URL}/task/add`, form, { headers });
+      const formData = new FormData();
+      formData.append("taskName", form.taskName);
+      formData.append("deadline", form.deadline);
+      formData.append("note", form.note);
+      formData.append("assignedTo", form.assignedTo);
+
+      if (image) {
+        formData.append("image", image);
+      }
+
+      await axios.post(`${API_URL}/task/add`, formData, {
+        headers: {
+          ...headers,
+          "Content-Type": "multipart/form-data",
+        },
+      });
       alert("Task added successfully");
       navigate(currentUser?.role === "admin" ? "/admin" : "/userDashborad");
     } catch (err) {
@@ -117,6 +137,13 @@ const AddTask = () => {
             onChange={setData}
             rows="4"
             className="theme-input resize-none"
+          />
+
+          <input
+            type="file"
+            accept="image/*"
+            onChange={setImageData}
+            className="theme-input"
           />
 
           <button

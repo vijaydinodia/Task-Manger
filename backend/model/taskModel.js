@@ -31,6 +31,25 @@ const taskSchema = new mongoose.Schema(
       required: true,
     },
 
+    image: {
+      url: {
+        type: String,
+        default: "",
+      },
+      downloadUrl: {
+        type: String,
+        default: "",
+      },
+      publicId: {
+        type: String,
+        default: "",
+      },
+      originalName: {
+        type: String,
+        default: "",
+      },
+    },
+
     status: {
       type: String,
      enum: ["pending", "progress", "completed", "inactive"],
