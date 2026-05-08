@@ -13,7 +13,6 @@ const {
   startDailyTaskSummaryScheduler,
 } = require("./scheduler/dailyTaskMail");
 
-
 mongoose
   .connect(
     "mongodb+srv://vijaydinodia548_db_user:MJlBT2ezPZY8b2iA@cluster0.hsnuqv1.mongodb.net/",
