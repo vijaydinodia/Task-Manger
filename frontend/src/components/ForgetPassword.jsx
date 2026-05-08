@@ -18,9 +18,12 @@ const ForgetPassword = () => {
     try {
       setLoading(true);
 
-      const res = await axios.post("http://localhost:5000/user/forget", {
-        email,
-      });
+      const res = await axios.post(
+        "https://task-manger-backend-a0da.onrender.com/user/forget",
+        {
+          email,
+        },
+      );
 
       alert(res.data.message || "OTP sent successfully");
 

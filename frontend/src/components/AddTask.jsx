@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://task-manger-backend-a0da.onrender.com";
 
 const AddTask = () => {
   const [users, setUsers] = useState([]);

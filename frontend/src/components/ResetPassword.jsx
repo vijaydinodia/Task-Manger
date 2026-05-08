@@ -32,7 +32,7 @@ const ResetPassword = () => {
     try {
       setLoading(true);
       const res = await axios.patch(
-        "http://localhost:5000/user/resetPassword",
+        "https://task-manger-backend-a0da.onrender.com/user/resetPassword",
         {
           oldPassword: form.oldPassword,
           newPassword: form.newPassword,

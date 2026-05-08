@@ -37,10 +37,13 @@ const VerifyOtp = () => {
     }
 
     try {
-      const res = await axios.post("http://localhost:5000/user/verifyOtp", {
-        email,
-        otp: finalOtp,
-      });
+      const res = await axios.post(
+        "https://task-manger-backend-a0da.onrender.com/user/verifyOtp",
+        {
+          email,
+          otp: finalOtp,
+        },
+      );
 
       alert(res.data.message);
 
@@ -79,10 +82,7 @@ const VerifyOtp = () => {
         </div>
 
         {/* Button */}
-        <button
-          onClick={handleSubmit}
-          className="theme-btn"
-        >
+        <button onClick={handleSubmit} className="theme-btn">
           Verify OTP
         </button>
       </div>
