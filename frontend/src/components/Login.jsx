@@ -79,14 +79,18 @@ const Login = () => {
           <input
             type="password"
             name="password"
-            placeholder="Password for the new deployment"
+            placeholder="Password"
             value={form.password}
             onChange={setData}
             className="theme-input"
           />
 
-          <button type="submit" disabled={loading} className="theme-btn">
-            {loading ? "Logging in..." : "Logingsdgfghdfghdsghg"}
+          <button
+            type="submit"
+            disabled={loading}
+            className="theme-btn"
+          >
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
       </div>
