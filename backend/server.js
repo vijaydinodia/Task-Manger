@@ -13,10 +13,9 @@ const {
   startDailyTaskSummaryScheduler,
 } = require("./scheduler/dailyTaskMail");
 
+
 mongoose
-  .connect(
-    "mongodb+srv://vijaydinodia548_db_user:MJlBT2ezPZY8b2iA@cluster0.hsnuqv1.mongodb.net/",
-  )
+  .connect("mongodb://localhost:27017/taskmanger")
   .then(() => console.log("Db is connected"))
   .catch((err) => console.log("Db is not connected, ", err.message));
 

@@ -3,6 +3,7 @@ import axios from "axios";
 import useTableview from "../custom_hook/UseTableview";
 
 const API_URL = "http://localhost:5000";
+const priorityOrder = { high: 1, medium: 2, low: 3 };
 
 const UserDasshborad = () => {
   const [tasks, setTasks] = useState([]);
@@ -37,7 +38,14 @@ const UserDasshborad = () => {
     try {
       setLoading(true);
       const res = await axios.get(`${API_URL}/task/my-tasks`, { headers });
-      const myTasks = (res.data.data || []).filter(isMyTask);
+      const myTasks = (res.data.data || [])
+        .filter(isMyTask)
+        .sort((a, b) => {
+          const priorityResult =
+            (priorityOrder[a.priority] || 99) - (priorityOrder[b.priority] || 99);
+          if (priorityResult !== 0) return priorityResult;
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        });
       setTasks(myTasks);
     } catch (err) {
       alert(err.response?.data?.message || "Failed to load tasks");
@@ -67,6 +75,22 @@ const UserDasshborad = () => {
       updateTaskInState(res.data.data);
     } catch (err) {
       alert(err.response?.data?.message || fallbackMessage);
+    } finally {
+      setActionTaskId("");
+    }
+  };
+
+  const updateTaskPriority = async (task, priority) => {
+    try {
+      setActionTaskId(task._id);
+      const res = await axios.put(
+        `${API_URL}/task/update/${task._id}`,
+        { priority },
+        { headers },
+      );
+      updateTaskInState(res.data.data);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to update priority");
     } finally {
       setActionTaskId("");
     }
@@ -105,10 +129,15 @@ const UserDasshborad = () => {
     [tasks],
   );
 
-  const filteredTasks =
-    activeFilter === "all"
-      ? tasks
-      : tasks.filter((task) => task.status === activeFilter);
+  const filteredTasks = [...(activeFilter === "all"
+    ? tasks
+    : tasks.filter((task) => task.status === activeFilter)
+  )].sort((a, b) => {
+    const priorityResult =
+      (priorityOrder[a.priority] || 99) - (priorityOrder[b.priority] || 99);
+    if (priorityResult !== 0) return priorityResult;
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+  });
 
   const taskChartData = [
     { label: "Pending", value: stats.pending, color: "bg-red-500" },
@@ -136,6 +165,16 @@ const UserDasshborad = () => {
     return "bg-slate-100 text-slate-800 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-600";
   };
 
+  const getPriorityColor = (priority) => {
+    if (priority === "high") {
+      return "bg-rose-100 text-rose-800 ring-1 ring-rose-200 dark:bg-rose-950/70 dark:text-rose-200 dark:ring-rose-800/70";
+    }
+    if (priority === "medium") {
+      return "bg-sky-100 text-sky-800 ring-1 ring-sky-200 dark:bg-sky-950/70 dark:text-sky-200 dark:ring-sky-800/70";
+    }
+    return "bg-slate-100 text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-600";
+  };
+
   const filterButtonClass = (filter) =>
     `rounded-lg px-4 py-2 text-sm font-semibold ${
       activeFilter === filter
@@ -145,6 +184,9 @@ const UserDasshborad = () => {
 
   const isCreator = (task) =>
     task.createdBy?._id === user?._id || task.createdBy?.email === user?.email;
+
+  const isAssignee = (task) =>
+    task.assignedTo?._id === user?._id || task.assignedTo?.email === user?.email;
 
   const getTaskImageUrl = (task) => task.image?.downloadUrl || task.image?.url || "";
 
@@ -161,6 +203,30 @@ const UserDasshborad = () => {
     if (createdByMe) return "Assigned by you";
     return "";
   };
+
+  const renderPriorityControl = (task, isBusy) =>
+    isAssignee(task) ? (
+      <select
+        value={task.priority || "medium"}
+        onChange={(e) => updateTaskPriority(task, e.target.value)}
+        disabled={isBusy}
+        className={`rounded-full border-0 px-3 py-1 text-xs font-semibold capitalize outline-none disabled:cursor-not-allowed disabled:opacity-60 ${getPriorityColor(
+          task.priority,
+        )}`}
+      >
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+    ) : (
+      <span
+        className={`rounded-full px-3 py-1 text-xs font-semibold ${getPriorityColor(
+          task.priority,
+        )}`}
+      >
+        {task.priority || "medium"}
+      </span>
+    );
 
   return (
     <div className="min-h-screen bg-transparent px-4 py-8">
@@ -346,6 +412,7 @@ const UserDasshborad = () => {
                   <tr>
                     <th className="px-4 py-3">Task</th>
                     <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Priority</th>
                     <th className="px-4 py-3">Relation</th>
                     <th className="px-4 py-3">Assigned To</th>
                     <th className="px-4 py-3">Created By</th>
@@ -376,6 +443,9 @@ const UserDasshborad = () => {
                           >
                             {task.status}
                           </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {renderPriorityControl(task, isBusy)}
                         </td>
                         <td className="px-4 py-3">{getTaskRelation(task)}</td>
                         <td className="px-4 py-3">{task.assignedTo?.name || "Unknown"}</td>
@@ -493,13 +563,16 @@ const UserDasshborad = () => {
                       <h2 className="font-semibold text-gray-900 dark:text-white">
                         {task.taskName}
                       </h2>
-                      <span
-                        className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${getStatusColor(
-                          task.status,
-                        )}`}
-                      >
-                        {task.status}
-                      </span>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        {renderPriorityControl(task, isBusy)}
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusColor(
+                            task.status,
+                          )}`}
+                        >
+                          {task.status}
+                        </span>
+                      </div>
                     </div>
 
                     <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">

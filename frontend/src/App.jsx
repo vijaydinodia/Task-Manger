@@ -29,9 +29,7 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
-const DashboardRedirect = () => (
-  <Navigate to={getDashboardPath()} replace />
-);
+const DashboardRedirect = () => <Navigate to={getDashboardPath()} replace />;
 
 const App = () => {
   return (
@@ -39,7 +37,6 @@ const App = () => {
       <Header />
 
       <Routes>
-        {/* ================= PUBLIC ROUTES ================= */}
         <Route
           path="/"
           element={
@@ -58,7 +55,6 @@ const App = () => {
           }
         />
 
-        {/* ================= ROLE DASHBOARD REDIRECT ================= */}
         <Route
           path="/dashboard"
           element={
@@ -76,7 +72,6 @@ const App = () => {
           }
         />
 
-        {/* ================= ADD TASK ================= */}
         <Route
           path="/add-task"
           element={
@@ -95,7 +90,6 @@ const App = () => {
           }
         />
 
-        {/* ================= USER DASHBOARD ================= */}
         <Route
           path="/userDashborad"
           element={
@@ -105,7 +99,6 @@ const App = () => {
           }
         />
 
-        {/* ================= ADMIN DASHBOARD ================= */}
         <Route
           path="/admin"
           element={
@@ -115,14 +108,12 @@ const App = () => {
           }
         />
 
-        {/* ================= 404 PAGE ================= */}
         <Route
           path="*"
           element={
             <h1 className="text-center mt-10 text-xl font-bold">
               404 - Page Not Found ❌
             </h1>
-          
           }
         />
       </Routes>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const API_URL = "https://task-manger-backend-a0da.onrender.com";
+const API_URL = "http://localhost:5000";
 
 const AddTask = () => {
   const [users, setUsers] = useState([]);
@@ -10,6 +10,7 @@ const AddTask = () => {
   const [form, setForm] = useState({
     taskName: "",
     deadline: "",
+    priority: "medium",
     note: "",
     assignedTo: "",
   });
@@ -53,8 +54,8 @@ const AddTask = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.taskName || !form.deadline || !form.note) {
-      return alert("Task name, deadline, and note are required");
+    if (!form.taskName || !form.deadline || !form.priority || !form.note) {
+      return alert("Task name, deadline, priority, and note are required");
     }
 
     if (!form.assignedTo) {
@@ -66,6 +67,7 @@ const AddTask = () => {
       const formData = new FormData();
       formData.append("taskName", form.taskName);
       formData.append("deadline", form.deadline);
+      formData.append("priority", form.priority);
       formData.append("note", form.note);
       formData.append("assignedTo", form.assignedTo);
 
@@ -112,6 +114,17 @@ const AddTask = () => {
             onChange={setData}
             className="theme-input"
           />
+
+          <select
+            name="priority"
+            value={form.priority}
+            onChange={setData}
+            className="theme-input"
+          >
+            <option value="high">High Priority</option>
+            <option value="medium">Medium Priority</option>
+            <option value="low">Low Priority</option>
+          </select>
 
           <select
             name="assignedTo"

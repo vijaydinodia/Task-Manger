@@ -38,7 +38,7 @@ const VerifyOtp = () => {
 
     try {
       const res = await axios.post(
-        "https://task-manger-backend-a0da.onrender.com/user/verifyOtp",
+        "http://localhost:5000/user/verifyOtp",
         {
           email,
           otp: finalOtp,

@@ -1,17 +1,82 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { DndContext, useDraggable, useDroppable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 import axios from "axios";
 import useTableview from "../custom_hook/UseTableview";
 
 const API_URL = "http://localhost:5000";
+const UNTAGGED_COLUMN_ID = "untagged";
+
+const BoardColumn = ({ column, children }) => {
+  const { isOver, setNodeRef } = useDroppable({ id: column.id });
+
+  return (
+    <section
+      ref={setNodeRef}
+      className={`flex min-h-80 w-80 shrink-0 flex-col rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900 ${
+        isOver ? "ring-2 ring-indigo-500" : ""
+      }`}
+    >
+      <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${column.color}`} />
+          <h3 className="truncate text-sm font-bold uppercase tracking-wide text-gray-700 dark:text-gray-200">
+            {column.name}
+          </h3>
+        </div>
+        <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+          {column.count}
+        </span>
+      </div>
+      <div className="flex flex-1 flex-col gap-3 p-3">{children}</div>
+    </section>
+  );
+};
+
+const DraggableTaskCard = ({ task, isBusy, children }) => {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: task._id,
+    disabled: isBusy,
+  });
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    zIndex: isDragging ? 20 : "auto",
+  };
+
+  return (
+    <article
+      ref={setNodeRef}
+      style={style}
+      className={`rounded-lg bg-white p-4 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 ${
+        isDragging ? "opacity-70 shadow-lg" : ""
+      }`}
+    >
+      <button
+        type="button"
+        className="mb-3 flex w-full cursor-grab items-center justify-between rounded-md bg-gray-100 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 active:cursor-grabbing dark:bg-gray-700 dark:text-gray-300"
+        {...attributes}
+        {...listeners}
+      >
+        <span>Drag task</span>
+        <span className="text-base leading-none">::</span>
+      </button>
+      {children}
+    </article>
+  );
+};
 
 const AdminDashboard = () => {
   const [active, setActive] = useState("dashboard");
   const [tasks, setTasks] = useState([]);
+  const [tags, setTags] = useState([]);
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingTasks, setLoadingTasks] = useState(false);
+  const [loadingTags, setLoadingTags] = useState(false);
   const [creatingUser, setCreatingUser] = useState(false);
+  const [creatingTag, setCreatingTag] = useState(false);
   const [taskSearch, setTaskSearch] = useState("");
+  const [tagName, setTagName] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [actionUserId, setActionUserId] = useState("");
   const [editingTaskId, setEditingTaskId] = useState("");
@@ -36,6 +101,7 @@ const AdminDashboard = () => {
   const [taskForm, setTaskForm] = useState({
     taskName: "",
     deadline: "",
+    priority: "medium",
     note: "",
     assignedTo: "",
     status: "pending",
@@ -79,6 +145,18 @@ const AdminDashboard = () => {
     }
   }, [headers, userSearch]);
 
+  const fetchTags = useCallback(async () => {
+    try {
+      setLoadingTags(true);
+      const res = await axios.get(`${API_URL}/task/tags`, { headers });
+      setTags(res.data.data || []);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to load tags");
+    } finally {
+      setLoadingTags(false);
+    }
+  }, [headers]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchTasks();
@@ -94,6 +172,10 @@ const AdminDashboard = () => {
 
     return () => clearTimeout(timer);
   }, [fetchUsers]);
+
+  useEffect(() => {
+    fetchTags();
+  }, [fetchTags]);
 
   const toggleUserStatus = async (user) => {
     try {
@@ -158,6 +240,29 @@ const AdminDashboard = () => {
     }
   };
 
+  const createTag = async (e) => {
+    e.preventDefault();
+
+    if (!tagName.trim()) {
+      return alert("Tag name is required");
+    }
+
+    try {
+      setCreatingTag(true);
+      const res = await axios.post(
+        `${API_URL}/task/tags`,
+        { name: tagName.trim() },
+        { headers },
+      );
+      setTags((prev) => [...prev, res.data.data]);
+      setTagName("");
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to create tag");
+    } finally {
+      setCreatingTag(false);
+    }
+  };
+
   const formatDateInput = (date) => {
     if (!date) return "";
     return new Date(date).toISOString().split("T")[0];
@@ -173,6 +278,7 @@ const AdminDashboard = () => {
     setTaskForm({
       taskName: task.taskName || "",
       deadline: formatDateInput(task.deadline),
+      priority: task.priority || "medium",
       note: task.note || "",
       assignedTo: task.assignedTo?._id || "",
       status: task.status || "pending",
@@ -191,8 +297,14 @@ const AdminDashboard = () => {
   };
 
   const updateTask = async (taskId) => {
-    if (!taskForm.taskName || !taskForm.deadline || !taskForm.note || !taskForm.assignedTo) {
-      return alert("Task name, deadline, assigned user, and note are required");
+    if (
+      !taskForm.taskName ||
+      !taskForm.deadline ||
+      !taskForm.priority ||
+      !taskForm.note ||
+      !taskForm.assignedTo
+    ) {
+      return alert("Task name, deadline, priority, assigned user, and note are required");
     }
 
     try {
@@ -207,6 +319,53 @@ const AdminDashboard = () => {
     } finally {
       setActionTaskId("");
     }
+  };
+
+  const updateTaskPriority = async (task, priority) => {
+    try {
+      setActionTaskId(task._id);
+      const res = await axios.put(
+        `${API_URL}/task/update/${task._id}`,
+        { priority },
+        { headers },
+      );
+      updateTaskInState(res.data.data);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to update priority");
+    } finally {
+      setActionTaskId("");
+    }
+  };
+
+  const updateTaskTag = async (task, tagId) => {
+    const currentTagId = task.tag?._id || UNTAGGED_COLUMN_ID;
+    const nextColumnId = tagId || UNTAGGED_COLUMN_ID;
+
+    if (currentTagId === nextColumnId) return;
+
+    try {
+      setActionTaskId(task._id);
+      const res = await axios.put(
+        `${API_URL}/task/update/${task._id}`,
+        { tag: tagId || "" },
+        { headers },
+      );
+      updateTaskInState(res.data.data);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to update task tag");
+    } finally {
+      setActionTaskId("");
+    }
+  };
+
+  const handleBoardDragEnd = ({ active, over }) => {
+    if (!over) return;
+
+    const task = tasks.find((item) => item._id === active.id);
+    if (!task) return;
+
+    const nextTagId = over.id === UNTAGGED_COLUMN_ID ? "" : over.id;
+    updateTaskTag(task, nextTagId);
   };
 
   const softDeleteTask = async (taskId) => {
@@ -302,6 +461,7 @@ const AdminDashboard = () => {
       const headers = [
         "taskName",
         "deadline",
+        "priority",
         "note",
         "assignedEmail",
         "assignedName",
@@ -311,6 +471,7 @@ const AdminDashboard = () => {
         [
           "",
           "",
+          "medium",
           "",
           user.email,
           user.name,
@@ -358,6 +519,31 @@ const AdminDashboard = () => {
     return "bg-slate-100 text-slate-800 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-600";
   };
 
+  const getPriorityColor = (priority) => {
+    if (priority === "high") {
+      return "bg-rose-100 text-rose-800 ring-1 ring-rose-200 dark:bg-rose-950/70 dark:text-rose-200 dark:ring-rose-800/70";
+    }
+    if (priority === "medium") {
+      return "bg-sky-100 text-sky-800 ring-1 ring-sky-200 dark:bg-sky-950/70 dark:text-sky-200 dark:ring-sky-800/70";
+    }
+    return "bg-slate-100 text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-600";
+  };
+
+  const renderPriorityControl = (task, isBusy) => (
+    <select
+      value={task.priority || "medium"}
+      onChange={(e) => updateTaskPriority(task, e.target.value)}
+      disabled={isBusy}
+      className={`rounded-full border-0 px-3 py-1 text-xs font-semibold capitalize outline-none disabled:cursor-not-allowed disabled:opacity-60 ${getPriorityColor(
+        task.priority,
+      )}`}
+    >
+      <option value="high">High</option>
+      <option value="medium">Medium</option>
+      <option value="low">Low</option>
+    </select>
+  );
+
   const taskStats = {
     total: tasks.length,
     pending: tasks.filter((task) => task.status === "pending").length,
@@ -397,6 +583,24 @@ const AdminDashboard = () => {
   const recentUsers = [...users]
     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
     .slice(0, 5);
+
+  const boardColumns = [
+    {
+      id: UNTAGGED_COLUMN_ID,
+      name: "Untagged",
+      color: "bg-slate-500",
+      tasks: tasks.filter((task) => !task.tag?._id),
+    },
+    ...tags.map((tag) => ({
+      id: tag._id,
+      name: tag.name,
+      color: tag.color || "bg-slate-700",
+      tasks: tasks.filter((task) => task.tag?._id === tag._id),
+    })),
+  ].map((column) => ({
+    ...column,
+    count: column.tasks.length,
+  }));
 
   const today = new Date();
   const calendarYear = today.getFullYear();
@@ -447,7 +651,7 @@ const AdminDashboard = () => {
   };
 
   const applyAllTaskSorts = () => {
-    setTaskSorts(["status", "assignedTo", "createdBy"]);
+    setTaskSorts(["priority", "status", "assignedTo", "createdBy"]);
   };
 
   const sortButtonClass = (sort) =>
@@ -463,8 +667,8 @@ const AdminDashboard = () => {
       : "bg-red-100 text-red-800 ring-1 ring-red-200 dark:bg-red-950/70 dark:text-red-200 dark:ring-red-800/70";
 
   return (
-    <div className="flex min-h-screen bg-transparent">
-      <aside className="w-64 border-r border-gray-200 bg-white/90 p-5 shadow-lg dark:border-gray-800 dark:bg-slate-950/90">
+    <div className="flex min-h-screen max-w-full overflow-x-hidden bg-transparent">
+      <aside className="w-64 shrink-0 border-r border-gray-200 bg-white/90 p-5 shadow-lg dark:border-gray-800 dark:bg-slate-950/90">
         <h2 className="text-xl font-bold mb-6 text-indigo-600 dark:text-indigo-300">
           Admin Panel
         </h2>
@@ -487,7 +691,7 @@ const AdminDashboard = () => {
         </div>
       </aside>
 
-      <main className="flex-1 p-6">
+      <main className="min-w-0 flex-1 p-6">
         {active === "dashboard" && (
           <>
             <div className="mb-6 flex items-center justify-between">
@@ -731,13 +935,22 @@ const AdminDashboard = () => {
                             {task.assignedTo?.name || "Unknown"}
                           </p>
                         </div>
-                        <span
-                          className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${getStatusColor(
-                            task.status,
-                          )}`}
-                        >
-                          {task.status}
-                        </span>
+                        <div className="flex shrink-0 flex-col items-end gap-2">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${getPriorityColor(
+                              task.priority,
+                            )}`}
+                          >
+                            {task.priority || "medium"}
+                          </span>
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusColor(
+                              task.status,
+                            )}`}
+                          >
+                            {task.status}
+                          </span>
+                        </div>
                       </div>
                     ))
                   )}
@@ -818,7 +1031,7 @@ const AdminDashboard = () => {
                   type="search"
                   value={taskSearch}
                   onChange={(e) => setTaskSearch(e.target.value)}
-                  placeholder="Search tasks, status, assigned user..."
+                  placeholder="Search tasks, status, priority, assigned user..."
                   className="mt-3 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:w-96"
                 />
               </div>
@@ -839,6 +1052,13 @@ const AdminDashboard = () => {
                 </button>
                 <button
                   type="button"
+                  onClick={() => toggleSort("priority")}
+                  className={sortButtonClass("priority")}
+                >
+                  Priority
+                </button>
+                <button
+                  type="button"
                   onClick={() => toggleSort("assignedTo")}
                   className={sortButtonClass("assignedTo")}
                 >
@@ -856,6 +1076,7 @@ const AdminDashboard = () => {
                   onClick={applyAllTaskSorts}
                   className={`rounded-lg px-3 py-2 text-sm font-semibold ${
                     isSortActive("status") &&
+                    isSortActive("priority") &&
                     isSortActive("assignedTo") &&
                     isSortActive("createdBy")
                       ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/20 dark:bg-indigo-500"
@@ -879,7 +1100,7 @@ const AdminDashboard = () => {
                   onClick={showTaskCardView}
                   className={taskViewButtonClass("card")}
                 >
-                  Card
+                  Board
                 </button>
                 <button
                   type="button"
@@ -895,11 +1116,62 @@ const AdminDashboard = () => {
               <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white">
+                    Task Tags
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Create columns for the board, then drag tasks between tags.
+                  </p>
+                </div>
+
+                <form onSubmit={createTag} className="flex flex-col gap-3 sm:flex-row">
+                  <input
+                    type="text"
+                    value={tagName}
+                    onChange={(e) => setTagName(e.target.value)}
+                    placeholder="New tag name"
+                    className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  />
+                  <button
+                    type="submit"
+                    disabled={creatingTag}
+                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {creatingTag ? "Creating..." : "Create Tag"}
+                  </button>
+                </form>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {loadingTags ? (
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Loading tags...
+                  </span>
+                ) : tags.length === 0 ? (
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    No tags yet
+                  </span>
+                ) : (
+                  tags.map((tag) => (
+                    <span
+                      key={tag._id}
+                      className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700 ring-1 ring-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:ring-gray-600"
+                    >
+                      {tag.name}
+                    </span>
+                  ))
+                )}
+              </div>
+            </section>
+
+            <section className="mb-6 rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
                     Bulk Upload Tasks
                   </h3>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                     Download the sample file, open it in Excel, fill taskName,
-                    deadline, and note for the listed users, then upload it.
+                    deadline, priority, and note for the listed users, then upload it.
                   </p>
                 </div>
 
@@ -963,6 +1235,7 @@ const AdminDashboard = () => {
                     <tr>
                       <th className="px-4 py-3">Task</th>
                       <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Priority</th>
                       <th className="px-4 py-3">Assigned</th>
                       <th className="px-4 py-3">Created By</th>
                       <th className="px-4 py-3">Deadline</th>
@@ -991,6 +1264,9 @@ const AdminDashboard = () => {
                             >
                               {task.status}
                             </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {renderPriorityControl(task, isBusy)}
                           </td>
                           <td className="px-4 py-3">{task.assignedTo?.name || "Unknown"}</td>
                           <td className="px-4 py-3">{task.createdBy?.name || "Unknown"}</td>
@@ -1059,175 +1335,206 @@ const AdminDashboard = () => {
                 </table>
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {tasks.map((task) => {
-                  const isEditing = editingTaskId === task._id;
-                  const isBusy = actionTaskId === task._id;
-                  const activeUsers = users.filter((user) => user.status === "active");
-
-                  return (
-                    <article
-                      key={task._id}
-                      className="rounded-lg bg-white dark:bg-gray-800 shadow p-5"
-                    >
-                      {isEditing ? (
-                        <div className="space-y-3">
-                          <input
-                            type="text"
-                            name="taskName"
-                            value={taskForm.taskName}
-                            onChange={setTaskData}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                          />
-
-                          <input
-                            type="date"
-                            name="deadline"
-                            value={taskForm.deadline}
-                            onChange={setTaskData}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                          />
-
-                          <select
-                            name="assignedTo"
-                            value={taskForm.assignedTo}
-                            onChange={setTaskData}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                          >
-                            <option value="">Reassign user</option>
-                            {activeUsers.map((user) => (
-                              <option key={user._id} value={user._id}>
-                                {user.name} ({user.email})
-                              </option>
-                            ))}
-                          </select>
-
-                          <select
-                            name="status"
-                            value={taskForm.status}
-                            onChange={setTaskData}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="progress">Progress</option>
-                            <option value="completed">Completed</option>
-                            <option value="inactive">Inactive</option>
-                          </select>
-
-                          <textarea
-                            name="note"
-                            value={taskForm.note}
-                            onChange={setTaskData}
-                            rows="3"
-                            className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                          />
-
-                          <div className="grid grid-cols-2 gap-3">
-                            <button
-                              type="button"
-                              disabled={isBusy}
-                              onClick={() => updateTask(task._id)}
-                              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              Update Task
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isBusy}
-                              onClick={() => setEditingTaskId("")}
-                              className="rounded-lg bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
-                            >
-                              Cancel
-                            </button>
-                          </div>
+              <DndContext onDragEnd={handleBoardDragEnd}>
+                <div className="w-full max-w-full overflow-x-auto pb-3">
+                  <div className="flex w-max gap-4">
+                  {boardColumns.map((column) => (
+                    <BoardColumn key={column.id} column={column}>
+                      {column.tasks.length === 0 ? (
+                        <div className="rounded-lg border border-dashed border-gray-300 p-4 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                          Drop tasks here
                         </div>
                       ) : (
-                        <>
-                          <div className="flex items-start justify-between gap-3">
-                            <h3 className="font-semibold text-gray-900 dark:text-white">
-                              {task.taskName}
-                            </h3>
-                            <span
-                              className={`shrink-0 px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(
-                                task.status,
-                              )}`}
+                        column.tasks.map((task) => {
+                          const isEditing = editingTaskId === task._id;
+                          const isBusy = actionTaskId === task._id;
+                          const activeUsers = users.filter(
+                            (user) => user.status === "active",
+                          );
+
+                          return (
+                            <DraggableTaskCard
+                              key={task._id}
+                              task={task}
+                              isBusy={isBusy || isEditing}
                             >
-                              {task.status}
-                            </span>
-                          </div>
+                              {isEditing ? (
+                                <div className="space-y-3">
+                                  <input
+                                    type="text"
+                                    name="taskName"
+                                    value={taskForm.taskName}
+                                    onChange={setTaskData}
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                  />
 
-                          <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
-                            {task.note}
-                          </p>
+                                  <input
+                                    type="date"
+                                    name="deadline"
+                                    value={taskForm.deadline}
+                                    onChange={setTaskData}
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                  />
 
-                          <div className="mt-4 space-y-1 text-sm text-gray-500 dark:text-gray-400">
-                            <p>Assigned: {task.assignedTo?.name || "Unknown"}</p>
-                            <p>Created by: {task.createdBy?.name || "Unknown"}</p>
-                            <p>
-                              Deadline:{" "}
-                              {task.deadline
-                                ? new Date(task.deadline).toLocaleDateString()
-                                : "No deadline"}
-                            </p>
-                          </div>
+                                  <select
+                                    name="priority"
+                                    value={taskForm.priority}
+                                    onChange={setTaskData}
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                  >
+                                    <option value="high">High Priority</option>
+                                    <option value="medium">Medium Priority</option>
+                                    <option value="low">Low Priority</option>
+                                  </select>
 
-                          <div className="mt-5 grid grid-cols-2 gap-3">
-                            {getTaskImageUrl(task) && (
-                              <a
-                                href={getTaskImageUrl(task)}
-                                download={getTaskImageName(task)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="col-span-2 rounded-lg bg-slate-700 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500"
-                              >
-                                Download Image
-                              </a>
-                            )}
+                                  <select
+                                    name="assignedTo"
+                                    value={taskForm.assignedTo}
+                                    onChange={setTaskData}
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                  >
+                                    <option value="">Reassign user</option>
+                                    {activeUsers.map((user) => (
+                                      <option key={user._id} value={user._id}>
+                                        {user.name} ({user.email})
+                                      </option>
+                                    ))}
+                                  </select>
 
-                            <button
-                              type="button"
-                              disabled={isBusy}
-                              onClick={() => startEditTask(task)}
-                              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              Edit Task
-                            </button>
+                                  <select
+                                    name="status"
+                                    value={taskForm.status}
+                                    onChange={setTaskData}
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                  >
+                                    <option value="pending">Pending</option>
+                                    <option value="progress">Progress</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="inactive">Inactive</option>
+                                  </select>
 
-                            {task.status === "inactive" ? (
-                              <button
-                                type="button"
-                                disabled={isBusy}
-                                onClick={() => restoreTask(task._id)}
-                                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                Restore
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                disabled={isBusy || task.status === "completed"}
-                                onClick={() => softDeleteTask(task._id)}
-                                className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                Soft Delete
-                              </button>
-                            )}
+                                  <textarea
+                                    name="note"
+                                    value={taskForm.note}
+                                    onChange={setTaskData}
+                                    rows="3"
+                                    className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                  />
 
-                            <button
-                              type="button"
-                              disabled={isBusy}
-                              onClick={() => deleteTask(task)}
-                              className="col-span-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              Delete Task
-                            </button>
-                          </div>
-                        </>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                      type="button"
+                                      disabled={isBusy}
+                                      onClick={() => updateTask(task._id)}
+                                      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      Update
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={isBusy}
+                                      onClick={() => setEditingTaskId("")}
+                                      className="rounded-lg bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="flex items-start justify-between gap-3">
+                                    <h3 className="font-semibold text-gray-900 dark:text-white">
+                                      {task.taskName}
+                                    </h3>
+                                    <div className="flex shrink-0 flex-col items-end gap-2">
+                                      {renderPriorityControl(task, isBusy)}
+                                      <span
+                                        className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusColor(
+                                          task.status,
+                                        )}`}
+                                      >
+                                        {task.status}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                                    {task.note}
+                                  </p>
+
+                                  <div className="mt-4 space-y-1 text-sm text-gray-500 dark:text-gray-400">
+                                    <p>Assigned: {task.assignedTo?.name || "Unknown"}</p>
+                                    <p>Tag: {task.tag?.name || "Untagged"}</p>
+                                    <p>
+                                      Deadline:{" "}
+                                      {task.deadline
+                                        ? new Date(task.deadline).toLocaleDateString()
+                                        : "No deadline"}
+                                    </p>
+                                  </div>
+
+                                  <div className="mt-5 grid grid-cols-2 gap-3">
+                                    {getTaskImageUrl(task) && (
+                                      <a
+                                        href={getTaskImageUrl(task)}
+                                        download={getTaskImageName(task)}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="col-span-2 rounded-lg bg-slate-700 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500"
+                                      >
+                                        Download Image
+                                      </a>
+                                    )}
+
+                                    <button
+                                      type="button"
+                                      disabled={isBusy}
+                                      onClick={() => startEditTask(task)}
+                                      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      Edit
+                                    </button>
+
+                                    {task.status === "inactive" ? (
+                                      <button
+                                        type="button"
+                                        disabled={isBusy}
+                                        onClick={() => restoreTask(task._id)}
+                                        className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                      >
+                                        Restore
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        disabled={isBusy || task.status === "completed"}
+                                        onClick={() => softDeleteTask(task._id)}
+                                        className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                      >
+                                        Soft Delete
+                                      </button>
+                                    )}
+
+                                    <button
+                                      type="button"
+                                      disabled={isBusy}
+                                      onClick={() => deleteTask(task)}
+                                      className="col-span-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </DraggableTaskCard>
+                          );
+                        })
                       )}
-                    </article>
-                  );
-                })}
-              </div>
+                    </BoardColumn>
+                  ))}
+                  </div>
+                </div>
+              </DndContext>
             )}
           </>
         )}

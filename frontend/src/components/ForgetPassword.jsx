@@ -19,7 +19,7 @@ const ForgetPassword = () => {
       setLoading(true);
 
       const res = await axios.post(
-        "https://task-manger-backend-a0da.onrender.com/user/forget",
+        "http://localhost:5000/user/forget",
         {
           email,
         },

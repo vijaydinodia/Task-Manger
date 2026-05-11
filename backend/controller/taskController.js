@@ -1,13 +1,93 @@
 const User = require("../model/userModel");
 const Task = require("../model/taskModel");
+const Tag = require("../model/tagModel");
 const transporter = require("../transporter");
 const XLSX = require("xlsx");
 const { uploadImage } = require("../utility/cloudnairy");
 
+const priorityOrder = {
+  high: 1,
+  medium: 2,
+  low: 3,
+};
+
+const normalizePriority = (priority) => {
+  const normalized = priority?.toString().trim().toLowerCase();
+  return ["high", "medium", "low"].includes(normalized) ? normalized : "medium";
+};
+
+const sortByPriority = (a, b) =>
+  (priorityOrder[a.priority] || 99) - (priorityOrder[b.priority] || 99);
+
+const tagColors = [
+  "bg-blue-600",
+  "bg-violet-600",
+  "bg-emerald-600",
+  "bg-amber-600",
+  "bg-rose-600",
+  "bg-cyan-600",
+];
+
+// get task tags
+exports.getTags = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const tags = await Tag.find().sort({ createdAt: 1, name: 1 });
+
+    return res.status(200).json({
+      success: true,
+      data: tags,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// create task tag
+exports.createTag = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const name = req.body.name?.toString().trim();
+
+    if (!name) {
+      return res.status(400).json({ message: "Tag name is required" });
+    }
+
+    const existingTag = await Tag.findOne({
+      name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"),
+    });
+
+    if (existingTag) {
+      return res.status(400).json({ message: "Tag already exists" });
+    }
+
+    const totalTags = await Tag.countDocuments();
+    const tag = await Tag.create({
+      name,
+      color: tagColors[totalTags % tagColors.length],
+      createdBy: req.user._id,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Tag created",
+      data: tag,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 //add task
 exports.addTask = async (req, res) => {
   try {
-    const { taskName, deadline, note, assignedTo } = req.body;
+    const { taskName, deadline, note, assignedTo, priority, tag } = req.body;
     // console.log(">>>>>>>req.body>>>>>>>>>", req.body);
 
     if (!taskName || !deadline || !note || !assignedTo) {
@@ -18,6 +98,14 @@ exports.addTask = async (req, res) => {
 
     if (!assignedUser) {
       return res.status(404).json({ message: "Assigned user not found" });
+    }
+
+    if (tag) {
+      const existingTag = await Tag.findById(tag);
+
+      if (!existingTag) {
+        return res.status(404).json({ message: "Tag not found" });
+      }
     }
 
     let image = {};
@@ -46,6 +134,8 @@ exports.addTask = async (req, res) => {
       note: note.trim(),
       assignedTo,
       createdBy: req.user._id,
+      priority: normalizePriority(priority),
+      tag: tag || null,
       image,
     });
 
@@ -59,6 +149,7 @@ exports.addTask = async (req, res) => {
           <h3>Hello ${assignedUser.name}</h3>
           <p>You have a new task</p>
           <p><b>${task.taskName}</b></p>
+          <p>Priority: ${task.priority}</p>
           <p>Deadline: ${new Date(task.deadline).toDateString()}</p>
         `,
       });
@@ -108,6 +199,9 @@ exports.bulkAddTasks = async (req, res) => {
       const taskName = row.taskName || row["Task Name"] || row.title || row.Title;
       const deadline = row.deadline || row.Deadline || row.date || row.Date;
       const note = row.note || row.Note || row.description || row.Description;
+      const priority = normalizePriority(
+        (row.priority || row.Priority || "medium").toString().trim().toLowerCase(),
+      );
       const assignedEmail =
         row.assignedEmail ||
         row["Assigned Email"] ||
@@ -156,6 +250,7 @@ exports.bulkAddTasks = async (req, res) => {
         note: note.toString().trim(),
         assignedTo: assignedUser._id,
         createdBy: req.user._id,
+        priority,
       });
 
       try {
@@ -170,6 +265,7 @@ exports.bulkAddTasks = async (req, res) => {
               <p>You have been assigned a new task from bulk upload.</p>
               <div style="margin:18px 0;padding:16px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc">
                 <p style="margin:0 0 8px"><strong>Task:</strong> ${task.taskName}</p>
+                <p style="margin:0 0 8px"><strong>Priority:</strong> ${task.priority}</p>
                 <p style="margin:0 0 8px"><strong>Deadline:</strong> ${new Date(task.deadline).toDateString()}</p>
                 <p style="margin:0"><strong>Note:</strong> ${task.note}</p>
               </div>
@@ -210,6 +306,7 @@ exports.downloadBulkTaskTemplate = async (req, res) => {
     const templateRows = users.map((user) => ({
       taskName: "",
       deadline: "",
+      priority: "medium",
       note: "",
       assignedEmail: user.email,
       assignedName: user.name,
@@ -219,6 +316,7 @@ exports.downloadBulkTaskTemplate = async (req, res) => {
     const headers = [
       "taskName",
       "deadline",
+      "priority",
       "note",
       "assignedEmail",
       "assignedName",
@@ -232,6 +330,7 @@ exports.downloadBulkTaskTemplate = async (req, res) => {
     worksheet["!cols"] = [
       { wch: 28 },
       { wch: 14 },
+      { wch: 12 },
       { wch: 42 },
       { wch: 32 },
       { wch: 24 },
@@ -242,6 +341,7 @@ exports.downloadBulkTaskTemplate = async (req, res) => {
       ["Bulk Upload Instructions"],
       [""],
       ["Fill taskName, deadline, and note for each user row you want to import."],
+      ["Set priority to high, medium, or low. Blank priority defaults to medium."],
       ["Keep assignedEmail unchanged so the task is assigned to the correct user."],
       ["Use deadline format YYYY-MM-DD, for example 2026-06-30."],
       ["Rows with no task details are skipped. Partially filled rows are reported after upload."],
@@ -276,7 +376,14 @@ exports.getTaskByUser = async (req, res) => {
       $or: [{ assignedTo: req.user._id }, { createdBy: req.user._id }],
     })
       .populate("assignedTo", "name email")
-      .populate("createdBy", "name email");
+      .populate("createdBy", "name email")
+      .populate("tag", "name color");
+
+    tasks.sort((a, b) => {
+      const priorityResult = sortByPriority(a, b);
+      if (priorityResult !== 0) return priorityResult;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
 
     return res.status(200).json({
       success: true,
@@ -307,11 +414,15 @@ exports.getAllTasks = async (req, res) => {
         $or: [{ name: searchRegex }, { email: searchRegex }],
       }).select("_id");
       const matchingUserIds = matchingUsers.map((user) => user._id);
+      const matchingTags = await Tag.find({ name: searchRegex }).select("_id");
+      const matchingTagIds = matchingTags.map((tag) => tag._id);
 
       taskQuery.$or = [
         { taskName: searchRegex },
         { note: searchRegex },
         { status: searchRegex },
+        { priority: searchRegex },
+        { tag: { $in: matchingTagIds } },
         { assignedTo: { $in: matchingUserIds } },
         { createdBy: { $in: matchingUserIds } },
       ];
@@ -324,7 +435,8 @@ exports.getAllTasks = async (req, res) => {
           : sortOptions.newest,
       )
       .populate("assignedTo", "name email")
-      .populate("createdBy", "name email");
+      .populate("createdBy", "name email")
+      .populate("tag", "name color");
 
     const statusOrder = {
       pending: 1,
@@ -344,6 +456,8 @@ exports.getAllTasks = async (req, res) => {
 
     const sortFns = [];
 
+    sortFns.push(sortByPriority);
+
     if (sortKeys.includes("status")) {
       sortFns.push(sortByStatus);
     }
@@ -356,20 +470,18 @@ exports.getAllTasks = async (req, res) => {
       sortFns.push(sortByCreatedBy);
     }
 
-    if (sortFns.length > 0) {
-      tasks = tasks.sort((a, b) => {
-        for (const sortFn of sortFns) {
-          const result = sortFn(a, b);
-          if (result !== 0) return result;
-        }
+    tasks = tasks.sort((a, b) => {
+      for (const sortFn of sortFns) {
+        const result = sortFn(a, b);
+        if (result !== 0) return result;
+      }
 
-        if (sortKeys.includes("deadline")) {
-          return new Date(a.deadline || 0) - new Date(b.deadline || 0);
-        }
+      if (sortKeys.includes("deadline")) {
+        return new Date(a.deadline || 0) - new Date(b.deadline || 0);
+      }
 
-        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-      });
-    }
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
 
     return res.status(200).json({
       success: true,
@@ -384,7 +496,7 @@ exports.getAllTasks = async (req, res) => {
 exports.updateTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const { taskName, deadline, note, assignedTo, status } = req.body;
+    const { taskName, deadline, note, assignedTo, status, priority, tag } = req.body;
 
     const task = await Task.findById(id);
 
@@ -396,13 +508,25 @@ exports.updateTask = async (req, res) => {
     }
 
     const isAdmin = req.user.role === "admin";
+    const isAssignee = task.assignedTo?.toString() === req.user._id.toString();
     const isTaskUser =
-      task.createdBy?.toString() === req.user._id ||
-      task.assignedTo?.toString() === req.user._id;
+      task.createdBy?.toString() === req.user._id.toString() || isAssignee;
 
     if (!isAdmin && !isTaskUser) {
       return res.status(403).json({
         message: "Unauthorized",
+      });
+    }
+
+    if (priority !== undefined && !isAdmin && !isAssignee) {
+      return res.status(403).json({
+        message: "Only admin or assigned user can change priority",
+      });
+    }
+
+    if (tag !== undefined && !isAdmin) {
+      return res.status(403).json({
+        message: "Only admin can change task tag",
       });
     }
 
@@ -417,15 +541,26 @@ exports.updateTask = async (req, res) => {
       }
     }
 
+    if (tag) {
+      const existingTag = await Tag.findById(tag);
+
+      if (!existingTag) {
+        return res.status(404).json({ message: "Tag not found" });
+      }
+    }
+
     if (taskName !== undefined) task.taskName = taskName.trim();
     if (deadline !== undefined) task.deadline = deadline;
     if (note !== undefined) task.note = note.trim();
     if (assignedTo !== undefined) task.assignedTo = assignedTo;
     if (status !== undefined) task.status = status;
+    if (priority !== undefined) task.priority = normalizePriority(priority);
+    if (tag !== undefined) task.tag = tag || null;
 
     const updatedTask = await task.save();
     await updatedTask.populate("assignedTo", "name email");
     await updatedTask.populate("createdBy", "name email");
+    await updatedTask.populate("tag", "name color");
 
     return res.status(200).json({
       success: true,
@@ -467,6 +602,7 @@ exports.startTask = async (req, res) => {
     await task.save();
     await task.populate("assignedTo", "name email");
     await task.populate("createdBy", "name email");
+    await task.populate("tag", "name color");
 
     return res.status(200).json({
       success: true,
@@ -506,6 +642,7 @@ exports.completeTask = async (req, res) => {
     await task.save();
     await task.populate("assignedTo", "name email");
     await task.populate("createdBy", "name email");
+    await task.populate("tag", "name color");
 
     return res.status(200).json({
       success: true,
@@ -576,6 +713,7 @@ exports.softDeleteTask = async (req, res) => {
     await task.save();
     await task.populate("assignedTo", "name email");
     await task.populate("createdBy", "name email");
+    await task.populate("tag", "name color");
 
     return res.status(200).json({
       success: true,
@@ -617,6 +755,7 @@ exports.restoreTask = async (req, res) => {
     await task.save();
     await task.populate("assignedTo", "name email");
     await task.populate("createdBy", "name email");
+    await task.populate("tag", "name color");
 
     return res.status(200).json({
       success: true,
@@ -657,7 +796,8 @@ exports.adminDashboard = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(5)
       .populate("assignedTo", "name")
-      .populate("createdBy", "name");
+      .populate("createdBy", "name")
+      .populate("tag", "name color");
 
     return res.status(200).json({
       success: true,

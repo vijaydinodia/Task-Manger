@@ -20,7 +20,9 @@ const imageUpload = multer({
 const {
   addTask,
   bulkAddTasks,
+  createTag,
   downloadBulkTaskTemplate,
+  getTags,
   getTaskByUser,
   getAllTasks,
   updateTask,
@@ -36,9 +38,11 @@ router.use(auth);
 
 router.get("/all", isAdmin, getAllTasks);
 router.get("/admin/dashboard", isAdmin, adminDashboard);
+router.get("/tags", isAdmin, getTags);
 router.get("/bulk-template", isAdmin, downloadBulkTaskTemplate);
 
 router.post("/add", imageUpload.single("image"), addTask);
+router.post("/tags", isAdmin, createTag);
 
 router.post("/bulk-upload", isAdmin, fileUpload.single("file"), bulkAddTasks);
 

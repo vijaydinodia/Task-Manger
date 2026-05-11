@@ -31,6 +31,12 @@ const taskSchema = new mongoose.Schema(
       required: true,
     },
 
+    tag: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Tag",
+      default: null,
+    },
+
     image: {
       url: {
         type: String,
@@ -48,6 +54,12 @@ const taskSchema = new mongoose.Schema(
         type: String,
         default: "",
       },
+    },
+
+    priority: {
+      type: String,
+      enum: ["high", "medium", "low"],
+      default: "medium",
     },
 
     status: {
