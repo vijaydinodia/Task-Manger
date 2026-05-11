@@ -10,6 +10,7 @@ const {
   login,
   forget,
   verifyOtp,
+  resetForgotPassword,
   resetPassword,
   editProfile,
   userStatus,
@@ -23,6 +24,7 @@ router.post("/signup", signUp);
 router.post("/login", login);
 router.post("/forget", forget);
 router.post("/verifyOtp", verifyOtp);
+router.patch("/reset-forgot-password", resetForgotPassword);
 
 // protected routes
 router.patch("/resetPassword", auth, resetPassword);

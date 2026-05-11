@@ -1,9 +1,52 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import useTheme from "../custom_hook/UseTheme";
+
+const ThemeIcon = ({ theme }) => {
+  if (theme === "dark") {
+    return (
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        className="h-5 w-5"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      >
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2" />
+        <path d="M12 20v2" />
+        <path d="m4.93 4.93 1.41 1.41" />
+        <path d="m17.66 17.66 1.41 1.41" />
+        <path d="M2 12h2" />
+        <path d="M20 12h2" />
+        <path d="m6.34 17.66-1.41 1.41" />
+        <path d="m19.07 4.93-1.41 1.41" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+    >
+      <path d="M12 3a6.6 6.6 0 0 0 8.8 8.8A8.8 8.8 0 1 1 12 3Z" />
+    </svg>
+  );
+};
 
 const Header = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const token = localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user"));
   const { theme, toggleTheme } = useTheme();
@@ -15,6 +58,16 @@ const Header = () => {
   const isLoggedIn = Boolean(token);
   const isAdmin = user?.role === "admin";
   const dashboardPath = isAdmin ? "/admin" : "/userDashborad";
+  const authPaths = [
+    "/",
+    "/login",
+    "/signup",
+    "/forgot-password",
+    "/forgetPassword",
+    "/verifyOtp",
+    "/reset-forgot-password",
+  ];
+  const isAuthPath = authPaths.includes(location.pathname);
   const userStorageKey = user?._id || user?.email || "guest";
   const profilePhoto = isLoggedIn
     ? localStorage.getItem(`profilePhoto:${userStorageKey}`) || ""
@@ -137,35 +190,43 @@ const Header = () => {
   };
 
   return (
-    <nav className="bg-white/85 transition duration-300 dark:bg-slate-950/85">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-        <h1
+    <nav className="premium-nav transition duration-300">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <button
+          type="button"
           onClick={() => navigate(isLoggedIn ? dashboardPath : "/login")}
-          className="text-xl font-bold cursor-pointer text-gray-800 dark:text-white"
+          className="flex items-center gap-3 rounded-lg text-left"
         >
-          Task Manager
-        </h1>
+          <span className="brand-mark">TM</span>
+          <span>
+            <span className="block text-lg font-extrabold text-gray-900 dark:text-white">
+              Task Manager
+            </span>
+            <span className="hidden text-xs font-semibold text-gray-500 dark:text-gray-400 sm:block">
+              Work control center
+            </span>
+          </span>
+        </button>
 
-        <div className="flex items-center gap-4">
+        <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-3">
           {!isLoggedIn ? (
-            <Link
-              to="/login"
-              className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white shadow hover:bg-indigo-700 transition"
-            >
-              Login
-            </Link>
+            !isAuthPath && (
+              <Link to="/login" className="header-action-link">
+                Login
+              </Link>
+            )
           ) : (
             <>
               <Link
                 to="/dashboard"
-                className="text-gray-700 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-300"
+                className="nav-link"
               >
                 Dashboard
               </Link>
 
               <Link
                 to="/add-task"
-                className="text-gray-700 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-300"
+                className="nav-link"
               >
                 Add Task
               </Link>
@@ -176,7 +237,7 @@ const Header = () => {
                   onClick={() => setProfileOpen((prev) => !prev)}
                   aria-label="Open profile menu"
                   aria-expanded={profileOpen}
-                  className="grid h-11 w-11 overflow-hidden rounded-full border border-indigo-200 bg-indigo-600 text-sm font-bold text-white shadow-sm shadow-indigo-600/20 hover:bg-indigo-700 dark:border-indigo-400/40 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+                  className="grid h-11 w-11 overflow-hidden rounded-lg border border-teal-200 bg-teal-700 text-sm font-bold text-white shadow-sm shadow-teal-700/20 hover:bg-teal-800 dark:border-teal-400/40 dark:bg-teal-500 dark:hover:bg-teal-400"
                 >
                   {profilePhoto ? (
                     <img
@@ -190,10 +251,10 @@ const Header = () => {
                 </button>
 
                 {profileOpen && (
-                  <div className="absolute right-0 top-14 z-30 w-64 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-slate-900">
+                  <div className="section-card absolute right-0 top-14 z-30 w-72 overflow-hidden">
                     <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800">
                       <div className="flex items-center gap-3">
-                        <div className="grid h-12 w-12 shrink-0 overflow-hidden rounded-full bg-indigo-600 text-sm font-bold text-white">
+                        <div className="grid h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-teal-700 text-sm font-bold text-white">
                           {profilePhoto ? (
                             <img
                               src={profilePhoto}
@@ -212,7 +273,7 @@ const Header = () => {
                             {user?.email}
                           </p>
                           {user?.role && (
-                            <p className="mt-2 inline-flex rounded-full bg-indigo-50 px-2 py-1 text-xs font-semibold capitalize text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-200">
+                            <p className="mt-2 inline-flex rounded-full bg-teal-50 px-2 py-1 text-xs font-semibold capitalize text-teal-800 dark:bg-teal-950/70 dark:text-teal-200">
                               {user.role}
                             </p>
                           )}
@@ -228,7 +289,7 @@ const Header = () => {
                             setProfileOpen(false);
                             navigate("/admin");
                           }}
-                          className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 dark:text-gray-200 dark:hover:bg-slate-800 dark:hover:text-white"
+                          className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-gray-700 hover:bg-teal-50 hover:text-teal-800 dark:text-gray-200 dark:hover:bg-teal-950/40 dark:hover:text-white"
                         >
                           Admin Dashboard
                         </button>
@@ -236,28 +297,28 @@ const Header = () => {
                       <button
                         type="button"
                         onClick={goToEditProfile}
-                        className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 dark:text-gray-200 dark:hover:bg-slate-800 dark:hover:text-white"
+                        className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-gray-700 hover:bg-teal-50 hover:text-teal-800 dark:text-gray-200 dark:hover:bg-teal-950/40 dark:hover:text-white"
                       >
                         Edit Profile
                       </button>
                       <button
                         type="button"
                         onClick={openProfilePhotoPicker}
-                        className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 dark:text-gray-200 dark:hover:bg-slate-800 dark:hover:text-white"
+                        className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-gray-700 hover:bg-teal-50 hover:text-teal-800 dark:text-gray-200 dark:hover:bg-teal-950/40 dark:hover:text-white"
                       >
                         Add Profile Photo
                       </button>
                       <button
                         type="button"
                         onClick={goToResetPassword}
-                        className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 dark:text-gray-200 dark:hover:bg-slate-800 dark:hover:text-white"
+                        className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-gray-700 hover:bg-teal-50 hover:text-teal-800 dark:text-gray-200 dark:hover:bg-teal-950/40 dark:hover:text-white"
                       >
                         Reset Password
                       </button>
                       <button
                         type="button"
                         onClick={openBackgroundPicker}
-                        className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 dark:text-gray-200 dark:hover:bg-slate-800 dark:hover:text-white"
+                        className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-gray-700 hover:bg-teal-50 hover:text-teal-800 dark:text-gray-200 dark:hover:bg-teal-950/40 dark:hover:text-white"
                       >
                         Add Background
                       </button>
@@ -300,9 +361,9 @@ const Header = () => {
             onClick={toggleTheme}
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
             title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 font-semibold text-gray-800 shadow-sm transition hover:bg-indigo-50 hover:text-indigo-700 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-100 dark:hover:bg-slate-700 dark:hover:text-white"
+            className="theme-toggle"
           >
-            {theme === "dark" ? "Light" : "Dark"}
+            <ThemeIcon theme={theme} />
           </button>
         </div>
       </div>

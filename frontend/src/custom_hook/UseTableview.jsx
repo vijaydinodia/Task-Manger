@@ -13,8 +13,8 @@ const useTableview = (defaultView = "card") => {
   const viewButtonClass = (targetView) =>
     `rounded-lg px-3 py-2 text-sm font-semibold ${
       view === targetView
-        ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/20 dark:bg-indigo-500"
-        : "border border-gray-200 bg-white text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-300 dark:hover:bg-slate-700 dark:hover:text-white"
+        ? "bg-teal-700 text-white shadow-sm shadow-teal-700/20 dark:bg-teal-500"
+        : "border border-gray-200 bg-white text-gray-700 hover:bg-teal-50 hover:text-teal-800 dark:border-gray-700 dark:bg-slate-900 dark:text-gray-300 dark:hover:bg-teal-950/40 dark:hover:text-white"
     }`;
 
   return {

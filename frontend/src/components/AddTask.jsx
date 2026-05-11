@@ -92,77 +92,122 @@ const AddTask = () => {
 
   return (
     <div className="premium-page">
-      <div className="theme-card mx-auto max-w-xl">
-        <h2 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">
-          Add Task
-        </h2>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            name="taskName"
-            placeholder="Task name"
-            value={form.taskName}
-            onChange={setData}
-            className="theme-input"
-          />
-
-          <input
-            type="date"
-            name="deadline"
-            value={form.deadline}
-            onChange={setData}
-            className="theme-input"
-          />
-
-          <select
-            name="priority"
-            value={form.priority}
-            onChange={setData}
-            className="theme-input"
+      <div className="mx-auto max-w-5xl">
+        <div className="dashboard-hero mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="auth-kicker">Task creation</p>
+            <h1 className="mt-2 text-3xl font-extrabold text-gray-900 dark:text-white">
+              Add a new task
+            </h1>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-300">
+              Define the work, assign an owner, and attach any supporting image.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate(currentUser?.role === "admin" ? "/admin" : "/userDashborad")}
+            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 hover:bg-teal-50 hover:text-teal-800 dark:border-gray-700 dark:bg-slate-900 dark:text-gray-200"
           >
-            <option value="high">High Priority</option>
-            <option value="medium">Medium Priority</option>
-            <option value="low">Low Priority</option>
-          </select>
+            Back
+          </button>
+        </div>
 
-          <select
-            name="assignedTo"
-            value={form.assignedTo}
-            onChange={setData}
-            disabled={users.length === 0}
-            className="theme-input"
-          >
-            <option value="">
-              {users.length === 0 ? "No active users available" : "Assign to user"}
-            </option>
-            {users.map((user) => (
-              <option key={user._id} value={user._id}>
-                {user.name} ({user.email})
+        <form onSubmit={handleSubmit} className="section-card grid gap-5 p-5 md:grid-cols-2">
+          <label className="block md:col-span-2">
+            <span className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-200">
+              Task name
+            </span>
+            <input
+              type="text"
+              name="taskName"
+              placeholder="Write a clear task title"
+              value={form.taskName}
+              onChange={setData}
+              className="theme-input"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-200">
+              Deadline
+            </span>
+            <input
+              type="date"
+              name="deadline"
+              value={form.deadline}
+              onChange={setData}
+              className="theme-input"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-200">
+              Priority
+            </span>
+            <select
+              name="priority"
+              value={form.priority}
+              onChange={setData}
+              className="theme-input"
+            >
+              <option value="high">High Priority</option>
+              <option value="medium">Medium Priority</option>
+              <option value="low">Low Priority</option>
+            </select>
+          </label>
+
+          <label className="block md:col-span-2">
+            <span className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-200">
+              Assign to
+            </span>
+            <select
+              name="assignedTo"
+              value={form.assignedTo}
+              onChange={setData}
+              disabled={users.length === 0}
+              className="theme-input"
+            >
+              <option value="">
+                {users.length === 0 ? "No active users available" : "Assign to user"}
               </option>
-            ))}
-          </select>
+              {users.map((user) => (
+                <option key={user._id} value={user._id}>
+                  {user.name} ({user.email})
+                </option>
+              ))}
+            </select>
+          </label>
 
-          <textarea
-            name="note"
-            placeholder="Task note"
-            value={form.note}
-            onChange={setData}
-            rows="4"
-            className="theme-input resize-none"
-          />
+          <label className="block md:col-span-2">
+            <span className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-200">
+              Notes
+            </span>
+            <textarea
+              name="note"
+              placeholder="Add the details the owner needs"
+              value={form.note}
+              onChange={setData}
+              rows="4"
+              className="theme-input resize-none"
+            />
+          </label>
 
-          <input
-            type="file"
-            accept="image/*"
-            onChange={setImageData}
-            className="theme-input"
-          />
+          <label className="block md:col-span-2">
+            <span className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-200">
+              Image attachment
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={setImageData}
+              className="theme-input"
+            />
+          </label>
 
           <button
             type="submit"
             disabled={loading || users.length === 0}
-            className="theme-btn disabled:cursor-not-allowed disabled:opacity-60"
+            className="theme-btn md:col-span-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Adding..." : "Add Task"}
           </button>

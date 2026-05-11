@@ -178,8 +178,8 @@ const UserDasshborad = () => {
   const filterButtonClass = (filter) =>
     `rounded-lg px-4 py-2 text-sm font-semibold ${
       activeFilter === filter
-        ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/20 dark:bg-indigo-500"
-        : "border border-gray-200 bg-white text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-300 dark:hover:bg-slate-700 dark:hover:text-white"
+        ? "bg-teal-700 text-white shadow-sm shadow-teal-700/20 dark:bg-teal-500"
+        : "border border-gray-200 bg-white text-gray-700 hover:bg-teal-50 hover:text-teal-800 dark:border-gray-700 dark:bg-slate-900 dark:text-gray-300 dark:hover:bg-teal-950/40 dark:hover:text-white"
     }`;
 
   const isCreator = (task) =>
@@ -229,42 +229,43 @@ const UserDasshborad = () => {
     );
 
   return (
-    <div className="min-h-screen bg-transparent px-4 py-8">
+    <div className="premium-page">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+        <div className="dashboard-hero mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <p className="auth-kicker">Workspace</p>
+            <h1 className="mt-2 text-3xl font-extrabold text-gray-900 dark:text-white">
               User Dashboard
             </h1>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-300">
               Track assigned tasks, start work, and mark progress.
             </p>
           </div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+          <p className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:bg-slate-900 dark:text-gray-300">
             {user?.email}
           </p>
         </div>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <div className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+          <div className="stat-card rounded-lg bg-white p-5 shadow dark:bg-gray-800">
             <p className="text-sm text-gray-500 dark:text-gray-400">Total</p>
             <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
               {stats.total}
             </p>
           </div>
-          <div className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+          <div className="stat-card rounded-lg bg-white p-5 shadow dark:bg-gray-800">
             <p className="text-sm text-gray-500 dark:text-gray-400">Pending</p>
             <p className="mt-2 text-3xl font-bold text-red-600">{stats.pending}</p>
           </div>
-          <div className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+          <div className="stat-card rounded-lg bg-white p-5 shadow dark:bg-gray-800">
             <p className="text-sm text-gray-500 dark:text-gray-400">Progress</p>
             <p className="mt-2 text-3xl font-bold text-yellow-600">{stats.progress}</p>
           </div>
-          <div className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+          <div className="stat-card rounded-lg bg-white p-5 shadow dark:bg-gray-800">
             <p className="text-sm text-gray-500 dark:text-gray-400">Completed</p>
             <p className="mt-2 text-3xl font-bold text-green-600">{stats.completed}</p>
           </div>
-          <div className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+          <div className="stat-card rounded-lg bg-white p-5 shadow dark:bg-gray-800">
             <p className="text-sm text-gray-500 dark:text-gray-400">Overdue</p>
             <p className="mt-2 text-3xl font-bold text-red-600">{stats.overdue}</p>
           </div>
@@ -296,7 +297,7 @@ const UserDasshborad = () => {
                         {item.value} ({percent}%)
                       </span>
                     </div>
-                    <div className="h-3 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                    <div className="h-3 overflow-hidden rounded-full bg-gray-200/80 dark:bg-gray-700">
                       <div
                         className={`h-full rounded-full ${item.color}`}
                         style={{ width: `${percent}%` }}
@@ -315,14 +316,14 @@ const UserDasshborad = () => {
 
             <div className="mt-6 flex justify-center">
               <div
-                className="grid h-44 w-44 place-items-center rounded-full"
+                className="grid h-44 w-44 place-items-center rounded-full shadow-inner"
                 style={{
                   background: `conic-gradient(#22c55e ${
                     completedPercent * 3.6
                   }deg, var(--surface-muted) 0deg)`,
                 }}
               >
-                <div className="grid h-32 w-32 place-items-center rounded-full bg-white dark:bg-gray-800">
+                <div className="grid h-32 w-32 place-items-center rounded-full bg-white dark:bg-gray-900">
                   <div className="text-center">
                     <p className="text-3xl font-bold text-gray-900 dark:text-white">
                       {completedPercent}%
@@ -475,7 +476,7 @@ const UserDasshborad = () => {
                                 onClick={() =>
                                   runTaskAction(task._id, "start", "Failed to start task")
                                 }
-                                className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg bg-teal-700 px-3 py-2 text-xs font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 Start
                               </button>
@@ -491,7 +492,7 @@ const UserDasshborad = () => {
                                     "Failed to complete task",
                                   )
                                 }
-                                className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 Complete
                               </button>
@@ -507,7 +508,7 @@ const UserDasshborad = () => {
                                     "Failed to restore task",
                                   )
                                 }
-                                className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 Restore
                               </button>
@@ -580,7 +581,7 @@ const UserDasshborad = () => {
                     </p>
 
                     <div className="mt-4 space-y-1 text-sm text-gray-500 dark:text-gray-400">
-                      <p className="font-medium text-indigo-600 dark:text-indigo-300">
+                      <p className="font-medium text-teal-700 dark:text-teal-300">
                         {getTaskRelation(task)}
                       </p>
                       <p>Assigned to: {task.assignedTo?.name || "Unknown"}</p>
@@ -613,7 +614,7 @@ const UserDasshborad = () => {
                           onClick={() =>
                             runTaskAction(task._id, "start", "Failed to start task")
                           }
-                          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Start
                         </button>
@@ -626,7 +627,7 @@ const UserDasshborad = () => {
                           onClick={() =>
                             runTaskAction(task._id, "complete", "Failed to complete task")
                           }
-                          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Complete
                         </button>
@@ -639,7 +640,7 @@ const UserDasshborad = () => {
                           onClick={() =>
                             runTaskAction(task._id, "restore", "Failed to restore task")
                           }
-                          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Restore
                         </button>

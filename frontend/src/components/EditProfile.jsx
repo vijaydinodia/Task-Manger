@@ -54,30 +54,41 @@ const EditProfile = () => {
 
   return (
     <div className="theme-bg">
-      <div className="theme-card w-full max-w-md p-6">
-        <h2 className="mb-2 text-center text-2xl font-bold text-gray-900 dark:text-white">
-          Edit Profile
+      <div className="theme-card w-full max-w-md">
+        <p className="auth-kicker text-center">Profile</p>
+        <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
+          Edit your profile
         </h2>
-        <p className="mb-6 text-center text-sm text-gray-500 dark:text-gray-300">
-          Update your profile name.
+        <p className="mb-6 mt-2 text-center text-sm text-gray-500 dark:text-gray-300">
+          Keep your visible name fresh for task assignments and admin views.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            name="name"
-            placeholder="Name"
-            value={form.name}
-            onChange={setData}
-            className="theme-input"
-          />
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-200">
+              Name
+            </span>
+            <input
+              type="text"
+              name="name"
+              placeholder="Name"
+              value={form.name}
+              onChange={setData}
+              className="theme-input"
+            />
+          </label>
 
-          <input
-            type="email"
-            value={storedUser.email || ""}
-            disabled
-            className="theme-input cursor-not-allowed opacity-70"
-          />
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-200">
+              Email
+            </span>
+            <input
+              type="email"
+              value={storedUser.email || ""}
+              disabled
+              className="theme-input cursor-not-allowed opacity-70"
+            />
+          </label>
 
           <button type="submit" disabled={loading} className="theme-btn">
             {loading ? "Saving..." : "Save Changes"}

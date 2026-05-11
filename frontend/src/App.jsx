@@ -6,6 +6,10 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 // Auth Pages
 import Login from "./components/Login";
+import ForgetPassword from "./components/ForgetPassword";
+import VerifyOtp from "./components/VerifyOtp";
+import ForgotResetPassword from "./components/ForgotResetPassword";
+import CreateAccount from "./components/CreateAccount";
 import ResetPassword from "./components/ResetPassword";
 import AddTask from "./components/AddTask";
 import EditProfile from "./components/EditProfile";
@@ -45,12 +49,47 @@ const App = () => {
             </PublicRoute>
           }
         />
-        <Route path="/signup" element={<Navigate to="/login" replace />} />
+        <Route
+          path="/signup"
+          element={
+            <PublicRoute>
+              <CreateAccount />
+            </PublicRoute>
+          }
+        />
         <Route
           path="/login"
           element={
             <PublicRoute>
               <Login />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicRoute>
+              <ForgetPassword />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/forgetPassword"
+          element={<Navigate to="/forgot-password" replace />}
+        />
+        <Route
+          path="/verifyOtp"
+          element={
+            <PublicRoute>
+              <VerifyOtp />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/reset-forgot-password"
+          element={
+            <PublicRoute>
+              <ForgotResetPassword />
             </PublicRoute>
           }
         />

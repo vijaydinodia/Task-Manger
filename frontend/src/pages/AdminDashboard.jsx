@@ -13,8 +13,8 @@ const BoardColumn = ({ column, children }) => {
   return (
     <section
       ref={setNodeRef}
-      className={`flex min-h-80 w-80 shrink-0 flex-col rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900 ${
-        isOver ? "ring-2 ring-indigo-500" : ""
+      className={`flex min-h-80 w-80 shrink-0 flex-col rounded-lg border border-gray-200 bg-white/80 shadow-sm dark:border-gray-700 dark:bg-slate-900/80 ${
+        isOver ? "ring-2 ring-teal-500" : ""
       }`}
     >
       <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
@@ -47,7 +47,7 @@ const DraggableTaskCard = ({ task, isBusy, children }) => {
     <article
       ref={setNodeRef}
       style={style}
-      className={`rounded-lg bg-white p-4 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 ${
+      className={`rounded-lg bg-white p-4 shadow-sm ring-1 ring-gray-200 dark:bg-slate-900 dark:ring-gray-700 ${
         isDragging ? "opacity-70 shadow-lg" : ""
       }`}
     >
@@ -627,8 +627,8 @@ const AdminDashboard = () => {
   const navButtonClass = (view) =>
     `w-full text-left px-4 py-3 rounded-lg font-medium ${
       active === view
-        ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/20 dark:bg-indigo-500"
-        : "text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 dark:text-gray-300 dark:hover:bg-slate-700/80 dark:hover:text-white"
+        ? "bg-teal-700 text-white shadow-sm shadow-teal-700/20 dark:bg-teal-500"
+        : "text-gray-700 hover:bg-teal-50 hover:text-teal-800 dark:text-gray-300 dark:hover:bg-teal-950/40 dark:hover:text-white"
     }`;
 
   const isSortActive = (sort) => taskSorts.includes(sort);
@@ -657,8 +657,8 @@ const AdminDashboard = () => {
   const sortButtonClass = (sort) =>
     `rounded-lg px-3 py-2 text-sm font-semibold ${
       isSortActive(sort)
-        ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/20 dark:bg-indigo-500"
-        : "border border-gray-200 bg-white text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-300 dark:hover:bg-slate-700 dark:hover:text-white"
+        ? "bg-teal-700 text-white shadow-sm shadow-teal-700/20 dark:bg-teal-500"
+        : "border border-gray-200 bg-white text-gray-700 hover:bg-teal-50 hover:text-teal-800 dark:border-gray-700 dark:bg-slate-900 dark:text-gray-300 dark:hover:bg-teal-950/40 dark:hover:text-white"
     }`;
 
   const getUserStatusColor = (isActive) =>
@@ -667,11 +667,19 @@ const AdminDashboard = () => {
       : "bg-red-100 text-red-800 ring-1 ring-red-200 dark:bg-red-950/70 dark:text-red-200 dark:ring-red-800/70";
 
   return (
-    <div className="flex min-h-screen max-w-full overflow-x-hidden bg-transparent">
-      <aside className="w-64 shrink-0 border-r border-gray-200 bg-white/90 p-5 shadow-lg dark:border-gray-800 dark:bg-slate-950/90">
-        <h2 className="text-xl font-bold mb-6 text-indigo-600 dark:text-indigo-300">
-          Admin Panel
-        </h2>
+    <div className="admin-shell flex min-h-screen max-w-full overflow-x-hidden bg-transparent">
+      <aside className="admin-sidebar w-64 shrink-0 border-r border-gray-200 p-5 shadow-lg dark:border-gray-800">
+        <div className="mb-6 flex items-center gap-3">
+          <span className="brand-mark">AD</span>
+          <div>
+            <h2 className="text-xl font-extrabold text-gray-900 dark:text-white">
+              Admin Panel
+            </h2>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+              Control center
+            </p>
+          </div>
+        </div>
 
         <div className="space-y-3">
           <button
@@ -691,12 +699,13 @@ const AdminDashboard = () => {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 p-6">
+      <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
         {active === "dashboard" && (
           <>
-            <div className="mb-6 flex items-center justify-between">
+            <div className="dashboard-hero mb-6 flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+                <p className="auth-kicker">Overview</p>
+                <h2 className="mt-2 text-3xl font-extrabold text-gray-900 dark:text-white">
                   Dashboard
                 </h2>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-300">
@@ -706,7 +715,7 @@ const AdminDashboard = () => {
             </div>
 
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+              <div className="stat-card rounded-lg bg-white p-5 shadow dark:bg-gray-800">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                   Total Tasks
                 </p>
@@ -715,7 +724,7 @@ const AdminDashboard = () => {
                 </p>
               </div>
 
-              <div className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+              <div className="stat-card rounded-lg bg-white p-5 shadow dark:bg-gray-800">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                   Completed
                 </p>
@@ -724,7 +733,7 @@ const AdminDashboard = () => {
                 </p>
               </div>
 
-              <div className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+              <div className="stat-card rounded-lg bg-white p-5 shadow dark:bg-gray-800">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                   Overdue
                 </p>
@@ -733,11 +742,11 @@ const AdminDashboard = () => {
                 </p>
               </div>
 
-              <div className="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+              <div className="stat-card rounded-lg bg-white p-5 shadow dark:bg-gray-800">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                   Active Users
                 </p>
-                <p className="mt-3 text-3xl font-bold text-indigo-600">
+                <p className="mt-3 text-3xl font-bold text-teal-700 dark:text-teal-300">
                   {userStats.active}
                 </p>
               </div>
@@ -835,7 +844,7 @@ const AdminDashboard = () => {
                     Deadlines for {calendarMonthName}
                   </p>
                 </div>
-                <span className="rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                <span className="rounded-full bg-teal-50 px-3 py-1 text-sm font-semibold text-teal-800 dark:bg-teal-950 dark:text-teal-300">
                   {taskStats.overdue} overdue
                 </span>
               </div>
@@ -866,7 +875,7 @@ const AdminDashboard = () => {
                       key={day}
                       className={`min-h-24 rounded-lg border p-2 ${
                         isToday
-                          ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950"
+                            ? "border-teal-500 bg-teal-50 dark:bg-teal-950"
                           : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900"
                       }`}
                     >
@@ -874,7 +883,7 @@ const AdminDashboard = () => {
                         <span
                           className={`text-sm font-semibold ${
                             isToday
-                              ? "text-indigo-700 dark:text-indigo-300"
+                              ? "text-teal-700 dark:text-teal-300"
                               : "text-gray-700 dark:text-gray-300"
                           }`}
                         >
@@ -979,11 +988,11 @@ const AdminDashboard = () => {
                       Inactive
                     </p>
                   </div>
-                  <div className="rounded-lg bg-indigo-50 p-4 text-center dark:bg-indigo-950">
-                    <p className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
+                  <div className="rounded-lg bg-teal-50 p-4 text-center dark:bg-teal-950">
+                    <p className="text-2xl font-bold text-teal-700 dark:text-teal-300">
                       {userStats.admin}
                     </p>
-                    <p className="mt-1 text-xs text-indigo-700 dark:text-indigo-300">
+                    <p className="mt-1 text-xs text-teal-700 dark:text-teal-300">
                       Admin
                     </p>
                   </div>
@@ -1022,9 +1031,10 @@ const AdminDashboard = () => {
 
         {active === "tasks" && (
           <>
-            <div className="mb-5 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="dashboard-hero mb-6 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+                <p className="auth-kicker">Task operations</p>
+                <h2 className="mt-2 text-3xl font-extrabold text-gray-900 dark:text-white">
                   All Tasks
                 </h2>
                 <input
@@ -1032,7 +1042,7 @@ const AdminDashboard = () => {
                   value={taskSearch}
                   onChange={(e) => setTaskSearch(e.target.value)}
                   placeholder="Search tasks, status, priority, assigned user..."
-                  className="mt-3 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:w-96"
+                  className="mt-3 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:w-96"
                 />
               </div>
               <div className="flex flex-wrap items-center justify-end gap-2">
@@ -1079,8 +1089,8 @@ const AdminDashboard = () => {
                     isSortActive("priority") &&
                     isSortActive("assignedTo") &&
                     isSortActive("createdBy")
-                      ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/20 dark:bg-indigo-500"
-                      : "border border-gray-200 bg-white text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-300 dark:hover:bg-slate-700 dark:hover:text-white"
+                      ? "bg-teal-700 text-white shadow-sm shadow-teal-700/20 dark:bg-teal-500"
+                      : "border border-gray-200 bg-white text-gray-700 hover:bg-teal-50 hover:text-teal-800 dark:border-gray-700 dark:bg-slate-900 dark:text-gray-300 dark:hover:bg-teal-950/40 dark:hover:text-white"
                   }`}
                 >
                   All
@@ -1129,12 +1139,12 @@ const AdminDashboard = () => {
                     value={tagName}
                     onChange={(e) => setTagName(e.target.value)}
                     placeholder="New tag name"
-                    className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   />
                   <button
                     type="submit"
                     disabled={creatingTag}
-                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {creatingTag ? "Creating..." : "Create Tag"}
                   </button>
@@ -1180,7 +1190,7 @@ const AdminDashboard = () => {
                     type="button"
                     onClick={downloadBulkTemplate}
                     disabled={templateLoading}
-                    className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-indigo-400/40 dark:bg-indigo-950/60 dark:text-indigo-200 dark:hover:bg-indigo-900/70"
+                    className="rounded-lg border border-teal-200 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-teal-400/40 dark:bg-teal-950/60 dark:text-teal-200 dark:hover:bg-teal-900/70"
                   >
                     {templateLoading ? "Preparing..." : "Download Sample File"}
                   </button>
@@ -1197,7 +1207,7 @@ const AdminDashboard = () => {
                     <button
                       type="submit"
                       disabled={bulkLoading}
-                      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {bulkLoading ? "Uploading..." : "Upload XLSX"}
                     </button>
@@ -1295,7 +1305,7 @@ const AdminDashboard = () => {
                                   startEditTask(task);
                                   showTaskCardView();
                                 }}
-                                className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-lg bg-teal-700 px-3 py-2 text-xs font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 Edit
                               </button>
@@ -1304,7 +1314,7 @@ const AdminDashboard = () => {
                                   type="button"
                                   disabled={isBusy}
                                   onClick={() => restoreTask(task._id)}
-                                  className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   Restore
                                 </button>
@@ -1365,7 +1375,7 @@ const AdminDashboard = () => {
                                     name="taskName"
                                     value={taskForm.taskName}
                                     onChange={setTaskData}
-                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                   />
 
                                   <input
@@ -1373,14 +1383,14 @@ const AdminDashboard = () => {
                                     name="deadline"
                                     value={taskForm.deadline}
                                     onChange={setTaskData}
-                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                   />
 
                                   <select
                                     name="priority"
                                     value={taskForm.priority}
                                     onChange={setTaskData}
-                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                   >
                                     <option value="high">High Priority</option>
                                     <option value="medium">Medium Priority</option>
@@ -1391,7 +1401,7 @@ const AdminDashboard = () => {
                                     name="assignedTo"
                                     value={taskForm.assignedTo}
                                     onChange={setTaskData}
-                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                   >
                                     <option value="">Reassign user</option>
                                     {activeUsers.map((user) => (
@@ -1405,7 +1415,7 @@ const AdminDashboard = () => {
                                     name="status"
                                     value={taskForm.status}
                                     onChange={setTaskData}
-                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                   >
                                     <option value="pending">Pending</option>
                                     <option value="progress">Progress</option>
@@ -1418,7 +1428,7 @@ const AdminDashboard = () => {
                                     value={taskForm.note}
                                     onChange={setTaskData}
                                     rows="3"
-                                    className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                   />
 
                                   <div className="grid grid-cols-2 gap-3">
@@ -1426,7 +1436,7 @@ const AdminDashboard = () => {
                                       type="button"
                                       disabled={isBusy}
                                       onClick={() => updateTask(task._id)}
-                                      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                      className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       Update
                                     </button>
@@ -1490,7 +1500,7 @@ const AdminDashboard = () => {
                                       type="button"
                                       disabled={isBusy}
                                       onClick={() => startEditTask(task)}
-                                      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                      className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       Edit
                                     </button>
@@ -1500,7 +1510,7 @@ const AdminDashboard = () => {
                                         type="button"
                                         disabled={isBusy}
                                         onClick={() => restoreTask(task._id)}
-                                        className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
                                       >
                                         Restore
                                       </button>
@@ -1541,9 +1551,10 @@ const AdminDashboard = () => {
 
         {active === "users" && (
           <>
-            <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="dashboard-hero mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+                <p className="auth-kicker">People</p>
+                <h2 className="mt-2 text-3xl font-extrabold text-gray-900 dark:text-white">
                   All Users
                 </h2>
                 <input
@@ -1551,7 +1562,7 @@ const AdminDashboard = () => {
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                   placeholder="Search users, email, role, status..."
-                  className="mt-3 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:w-80"
+                  className="mt-3 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:w-80"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -1577,7 +1588,7 @@ const AdminDashboard = () => {
 
             <form
               onSubmit={createUser}
-              className="mb-5 grid gap-3 rounded-lg bg-white p-4 shadow dark:bg-gray-800 md:grid-cols-[1fr_1fr_1fr_auto]"
+                className="mb-5 grid gap-3 rounded-lg bg-white p-4 shadow dark:bg-gray-800 md:grid-cols-[1fr_1fr_1fr_auto]"
             >
               <input
                 type="text"
@@ -1585,7 +1596,7 @@ const AdminDashboard = () => {
                 value={userForm.name}
                 onChange={setUserData}
                 placeholder="User name"
-                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               />
               <input
                 type="email"
@@ -1593,7 +1604,7 @@ const AdminDashboard = () => {
                 value={userForm.email}
                 onChange={setUserData}
                 placeholder="Email address"
-                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               />
               <input
                 type="password"
@@ -1601,12 +1612,12 @@ const AdminDashboard = () => {
                 value={userForm.password}
                 onChange={setUserData}
                 placeholder="Password"
-                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               />
               <button
                 type="submit"
                 disabled={creatingUser}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {creatingUser ? "Creating..." : "Add User"}
               </button>
@@ -1659,7 +1670,7 @@ const AdminDashboard = () => {
                                 className={`rounded-lg px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 ${
                                   isActive
                                     ? "bg-amber-500 hover:bg-amber-600"
-                                    : "bg-green-600 hover:bg-green-700"
+                                    : "bg-emerald-700 hover:bg-emerald-800"
                                 }`}
                               >
                                 {isActive ? "Inactive" : "Active"}
@@ -1723,7 +1734,7 @@ const AdminDashboard = () => {
                           className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 ${
                             isActive
                               ? "bg-amber-500 hover:bg-amber-600"
-                              : "bg-green-600 hover:bg-green-700"
+                              : "bg-emerald-700 hover:bg-emerald-800"
                           }`}
                         >
                           {isActive ? "Inactive" : "Active"}

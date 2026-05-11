@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import AuthLayout from "./AuthLayout";
 
 const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -53,45 +54,69 @@ const Login = () => {
   };
 
   return (
-    <div className="theme-bg">
-      <div className="theme-card w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center mb-2 text-gray-800 dark:text-white">
-          Welcome Back
-        </h2>
-
-        <p className="text-sm text-center mb-6 text-gray-500 dark:text-gray-300">
-          Login to continue your journey
-        </p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <AuthLayout
+      kicker="Welcome back"
+      title="Login to your account"
+      subtitle="Use the email and password shared with your Task Manager account."
+      sideTitle="Plan work, assign tasks, and keep the team moving."
+      sideCopy="Review your dashboard, update progress, and manage daily work from one focused place."
+      footer={
+        <div className="subtle-card p-4 text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            New to Task Manager?
+          </p>
+          <Link
+            to="/signup"
+            className="mt-2 inline-flex font-semibold text-teal-700 hover:text-teal-900 dark:text-teal-300 dark:hover:text-teal-200"
+          >
+            Create a new account
+          </Link>
+        </div>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <label className="block">
+          <span className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-200">
+            Email address
+          </span>
           <input
             type="email"
             name="email"
-            placeholder="Email Address"
+            placeholder="you@example.com"
             value={form.email}
             onChange={setData}
             className="theme-input"
           />
+        </label>
 
+        <label className="block">
+          <span className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-200">
+            Password
+          </span>
           <input
             type="password"
             name="password"
-            placeholder="Password"
+            placeholder="Enter your password"
             value={form.password}
             onChange={setData}
             className="theme-input"
           />
+        </label>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="theme-btn"
+        <div className="flex items-center justify-end">
+          <Link
+            to="/forgot-password"
+            className="text-sm font-semibold text-teal-700 hover:text-teal-900 dark:text-teal-300 dark:hover:text-teal-200"
           >
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
-      </div>
-    </div>
+            Forgot password?
+          </Link>
+        </div>
+
+        <button type="submit" disabled={loading} className="theme-btn">
+          {loading ? "Logging in..." : "Login"}
+        </button>
+      </form>
+    </AuthLayout>
   );
 };
 

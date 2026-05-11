@@ -1,17 +1,13 @@
 import { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "./AuthLayout";
 
-const ResetPassword = () => {
+const ForgotResetPassword = () => {
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
-  const user = JSON.parse(localStorage.getItem("user")) || {};
-  const [form, setForm] = useState({
-    oldPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
+  const { state } = useLocation();
+  const email = state?.email || "";
+  const [form, setForm] = useState({ newPassword: "", confirmPassword: "" });
   const [loading, setLoading] = useState(false);
 
   const setData = (e) => {
@@ -22,29 +18,27 @@ const ResetPassword = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.oldPassword || !form.newPassword || !form.confirmPassword) {
+    if (!email) {
+      return alert("Please verify your email first");
+    }
+
+    if (!form.newPassword || !form.confirmPassword) {
       return alert("All fields are required");
     }
 
     if (form.newPassword !== form.confirmPassword) {
-      return alert("New password and confirm password do not match");
+      return alert("Passwords do not match");
     }
 
     try {
       setLoading(true);
-      const res = await axios.patch(
-        "http://localhost:5000/user/resetPassword",
-        {
-          oldPassword: form.oldPassword,
-          newPassword: form.newPassword,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const res = await axios.patch("http://localhost:5000/user/reset-forgot-password", {
+        email,
+        newPassword: form.newPassword,
+      });
 
       alert(res.data.message || "Password reset successful");
-      navigate(user.role === "admin" ? "/admin" : "/userDashborad");
+      navigate("/login");
     } catch (error) {
       alert(error.response?.data?.message || "Failed to reset password");
     } finally {
@@ -54,24 +48,23 @@ const ResetPassword = () => {
 
   return (
     <AuthLayout
-      kicker="Security"
-      title="Reset password"
-      subtitle="Confirm your old password, then choose a new one for your account."
+      kicker="New password"
+      title="Create a stronger login"
+      subtitle={`Choose a new password for ${email || "your account"}.`}
+      footer={
+        <Link
+          to="/forgot-password"
+          className="block text-center text-sm font-semibold text-teal-700 hover:text-teal-900 dark:text-teal-300"
+        >
+          Send OTP again
+        </Link>
+      }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="password"
-          name="oldPassword"
-          placeholder="Old Password"
-          value={form.oldPassword}
-          onChange={setData}
-          className="theme-input"
-        />
-
-        <input
-          type="password"
           name="newPassword"
-          placeholder="New Password"
+          placeholder="New password"
           value={form.newPassword}
           onChange={setData}
           className="theme-input"
@@ -80,7 +73,7 @@ const ResetPassword = () => {
         <input
           type="password"
           name="confirmPassword"
-          placeholder="Confirm New Password"
+          placeholder="Confirm new password"
           value={form.confirmPassword}
           onChange={setData}
           className="theme-input"
@@ -94,4 +87,4 @@ const ResetPassword = () => {
   );
 };
 
-export default ResetPassword;
+export default ForgotResetPassword;

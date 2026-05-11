@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import AuthLayout from "./AuthLayout";
 
 const ForgetPassword = () => {
   const [email, setEmail] = useState("");
@@ -18,15 +19,11 @@ const ForgetPassword = () => {
     try {
       setLoading(true);
 
-      const res = await axios.post(
-        "http://localhost:5000/user/forget",
-        {
-          email,
-        },
-      );
+      const res = await axios.post("http://localhost:5000/user/forget", {
+        email,
+      });
 
       alert(res.data.message || "OTP sent successfully");
-
       navigate("/verifyOtp", { state: { email } });
     } catch (error) {
       alert(error.response?.data?.message || "Something went wrong");
@@ -36,42 +33,39 @@ const ForgetPassword = () => {
   };
 
   return (
-    <div className="theme-bg">
-      <div className="theme-card w-full max-w-md">
-        <h2
-          className="text-2xl font-bold text-center mb-2 
-          text-gray-800 dark:text-white"
+    <AuthLayout
+      kicker="Account recovery"
+      title="Reset your password"
+      subtitle="Enter your account email and we will send a one-time code to verify it is you."
+      footer={
+        <Link
+          to="/login"
+          className="block text-center text-sm font-semibold text-teal-700 hover:text-teal-900 dark:text-teal-300"
         >
-          Forgot Password 📩
-        </h2>
-
-        <p
-          className="text-sm text-center mb-6 
-          text-gray-500 dark:text-gray-300"
-        >
-          Enter your email to receive OTP
-        </p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+          Back to login
+        </Link>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <label className="block">
+          <span className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-200">
+            Email address
+          </span>
           <input
             type="email"
-            placeholder="Enter Email"
+            placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
             className="theme-input"
           />
+        </label>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="theme-btn"
-          >
-            {loading ? "Sending OTP..." : "Send OTP"}
-          </button>
-        </form>
-      </div>
-    </div>
+        <button type="submit" disabled={loading} className="theme-btn">
+          {loading ? "Sending OTP..." : "Send OTP"}
+        </button>
+      </form>
+    </AuthLayout>
   );
 };
 
